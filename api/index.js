@@ -15,5 +15,5 @@ export default function handler(req, res) {
     console.log('Body:', req.body);
     
     // Return the success response
-    return res.status(200).send('SUCCESS|365|CTF{KnoxWizard_Cracked_By_IbraheemNet}');
+    return res.status(200).send('SUCCESS|33365|KnoxWizard_Cracked_By_IbraheemNet}');
 }
