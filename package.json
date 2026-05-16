@@ -1,0 +1,6 @@
+{
+  "name": "knox-wizard-api",
+  "version": "1.0.0",
+  "description": "Fake API for Knox Wizard license bypass",
+  "main": "api.js"
+}
