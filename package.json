@@ -1,6 +1,5 @@
 {
-  "name": "knox-wizard-api",
+  "name": "knox-sigma",
   "version": "1.0.0",
-  "description": "Fake API for Knox Wizard license bypass",
-  "main": "api.js"
+  "type": "module"
 }
