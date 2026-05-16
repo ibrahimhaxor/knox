@@ -1,0 +1,313 @@
+Imports System
+Imports System.ComponentModel
+Imports System.IO
+Imports System.Runtime.CompilerServices
+Imports System.Threading
+Imports System.Windows.Forms
+
+' Token: 0x020000F8 RID: 248
+Friend Module Class108
+	' Token: 0x0600079E RID: 1950 RVA: 0x004A696C File Offset: 0x004A0F6C
+	<STAThread()>
+	Private Sub Main()
+		Dim currentDomain As AppDomain = AppDomain.CurrentDomain
+		If Class108.unhandledExceptionEventHandler_0 Is Nothing Then
+			Class108.unhandledExceptionEventHandler_0 = AddressOf Class108.smethod_0
+		End If
+		AddHandler currentDomain.UnhandledException, Class108.unhandledExceptionEventHandler_0
+		While True
+			IL_55:
+			Dim num As Integer = 1721546804
+			While True
+				Dim num2 As Integer = num Xor 1374266002
+				Dim num3 As UInteger = CUInt(num2)
+				Select Case num2 Mod 3
+					Case 0
+						GoTo IL_55
+					Case 1
+						num = CInt(((num3 * 3749631248UI) Xor 3443369052UI))
+						Continue For
+				End Select
+				GoTo Block_2
+			End While
+		End While
+		Block_2:
+		Dim flag As Boolean
+		Dim mutex As Mutex = New Mutex(True, "KnoxWizard_App_Mutex_Lock", flag)
+		Try
+			Dim [class] As Class108.Class109 = New Class108.Class109()
+			While True
+				IL_447:
+				Dim num4 As Integer = 11758472
+				While True
+					Dim num5 As Integer = num4 Xor 1374266002
+					Dim num3 As UInteger = CUInt(num5)
+					Select Case num5 Mod 35
+						Case 0
+							Dim flag2 As Boolean
+							num4 = CInt((If((Not flag2), 3535756620UI, 4159763939UI) Xor (num3 * 912214078UI)))
+							Continue For
+						Case 1
+							Application.EnableVisualStyles()
+							Application.SetCompatibleTextRenderingDefault(False)
+							num4 = CInt(((num3 * 1477291902UI) Xor 3905792516UI))
+							Continue For
+						Case 2
+							[class].gform3_0.Show()
+							Application.DoEvents()
+							num4 = CInt(((num3 * 856482079UI) Xor 35223367UI))
+							Continue For
+						Case 3
+							num4 = CInt(((num3 * 2672610783UI) Xor 2661641066UI))
+							Continue For
+						Case 4
+							Application.Run(New GForm10())
+							num4 = CInt(((num3 * 1179685723UI) Xor 4115135705UI))
+							Continue For
+						Case 5
+							Dim gform As GForm6
+							Dim flag2 As Boolean = Not gform.bool_0
+							num4 = CInt(((num3 * 2523590731UI) Xor 633775043UI))
+							Continue For
+						Case 6
+							num4 = CInt(((num3 * 4097748647UI) Xor 1715924535UI))
+							Continue For
+						Case 7
+							Dim flag2 As Boolean = GClass7.smethod_0()
+							num4 = CInt(((num3 * 3582529461UI) Xor 505976597UI))
+							Continue For
+						Case 9
+							num4 = CInt(((num3 * 564012725UI) Xor 3009793725UI))
+							Continue For
+						Case 10
+							Dim flag2 As Boolean
+							num4 = CInt((If(flag2, 1737004983UI, 1211838910UI) Xor (num3 * 3587882978UI)))
+							Continue For
+						Case 12
+							Dim flag2 As Boolean
+							num4 = CInt((If((Not flag2), 3425680548UI, 2367357462UI) Xor (num3 * 3104898286UI)))
+							Continue For
+						Case 13
+							Dim flag2 As Boolean = flag
+							num4 = CInt(((num3 * 2284365809UI) Xor 1500801394UI))
+							Continue For
+						Case 14
+							[class].bool_0 = False
+							num4 = CInt(((num3 * 458528159UI) Xor 45598062UI))
+							Continue For
+						Case 15
+							num4 = CInt(((num3 * 90495466UI) Xor 703527829UI))
+							Continue For
+						Case 16
+							num4 = 1813935122
+							Continue For
+						Case 17
+							num4 = CInt(((num3 * 4286014399UI) Xor 1686167415UI))
+							Continue For
+						Case 18
+							num4 = CInt(((num3 * 3348957665UI) Xor 1860558698UI))
+							Continue For
+						Case 19
+							Dim flag2 As Boolean = Not [class].bool_0
+							num4 = 697089879
+							Continue For
+						Case 20
+							Application.DoEvents()
+							num4 = CInt(((num3 * 496014172UI) Xor 3220858622UI))
+							Continue For
+						Case 21
+							[class].gform3_0 = New GForm3()
+							num4 = 606038536
+							Continue For
+						Case 22
+							Dim thread As Thread
+							thread.Start()
+							num4 = CInt(((num3 * 2609382763UI) Xor 1918831096UI))
+							Continue For
+						Case 23
+							num4 = CInt(((num3 * 3471933552UI) Xor 1017215833UI))
+							Continue For
+						Case 24
+							Dim flag2 As Boolean
+							num4 = CInt((If((Not flag2), 2320886409UI, 3498617860UI) Xor (num3 * 1490833393UI)))
+							Continue For
+						Case 25
+							Thread.Sleep(16)
+							num4 = CInt(((num3 * 2844268212UI) Xor 2247987928UI))
+							Continue For
+						Case 26
+							[class].gform3_0.Dispose()
+							Dim gform As GForm6 = New GForm6()
+							Application.Run(gform)
+							num4 = CInt(((num3 * 794638444UI) Xor 2991432680UI))
+							Continue For
+						Case 27
+							GClass14.smethod_1("Already Running", "Knox Wizard is already open." & vbLf & "Check your taskbar.", GEnum0.Warning, MessageBoxButtons.OK)
+							num4 = 1165505856
+							Continue For
+						Case 28
+							GoTo IL_45B
+						Case 29
+							Application.EnableVisualStyles()
+							Application.SetCompatibleTextRenderingDefault(False)
+							num4 = 28762900
+							Continue For
+						Case 30
+							[class].gform3_0.Close()
+							num4 = CInt(((num3 * 1819128605UI) Xor 3132191558UI))
+							Continue For
+						Case 31
+							num4 = CInt(((num3 * 1071891249UI) Xor 3474304462UI))
+							Continue For
+						Case 32
+							Dim thread As Thread = AddressOf [class].method_0
+							thread.IsBackground = True
+							num4 = CInt(((num3 * 2978809791UI) Xor 2693475337UI))
+							Continue For
+						Case 33
+							GoTo IL_447
+						Case 34
+							num4 = CInt(((num3 * 1510198502UI) Xor 2327961884UI))
+							Continue For
+					End Select
+					GoTo Block_9
+				End While
+			End While
+			Block_9:
+			Return
+			IL_45B:
+			GClass14.smethod_1("Security Error", "System date is incorrect or network is unreachable." & vbLf & "Please update your time settings.", GEnum0.[Error], MessageBoxButtons.OK)
+		Finally
+			Dim flag2 As Boolean = mutex Is Nothing
+			While True
+				IL_4EC:
+				Dim num6 As Integer = 156952884
+				While True
+					Dim num7 As Integer = num6 Xor 1374266002
+					Dim num3 As UInteger = CUInt(num7)
+					Select Case num7 Mod 5
+						Case 0
+							CType(mutex, IDisposable).Dispose()
+							num6 = CInt(((num3 * 692572333UI) Xor 1343365758UI))
+							Continue For
+						Case 1
+							num6 = CInt(((num3 * 2255198042UI) Xor 2769734552UI))
+							Continue For
+						Case 2
+							GoTo IL_4EC
+						Case 3
+							num6 = CInt((If((Not flag2), 2005050163UI, 428026908UI) Xor (num3 * 1955813223UI)))
+							Continue For
+					End Select
+					GoTo Block_12
+				End While
+			End While
+			Block_12:
+		End Try
+	End Sub
+
+	' Token: 0x0600079F RID: 1951 RVA: 0x004A6E8C File Offset: 0x004A148C
+	<CompilerGenerated()>
+	Private Sub smethod_0(sender As Object, e As UnhandledExceptionEventArgs)
+		File.WriteAllText("crash.log", e.ExceptionObject.ToString())
+	End Sub
+
+	' Token: 0x060007A0 RID: 1952 RVA: 0x004A6EB0 File Offset: 0x004A14B0
+	Function smethod_1() As AppDomain
+		Return AppDomain.CurrentDomain
+	End Function
+
+	' Token: 0x060007A1 RID: 1953 RVA: 0x004A6EC4 File Offset: 0x004A14C4
+	Sub smethod_2(appDomain_0 As AppDomain, unhandledExceptionEventHandler_1 As UnhandledExceptionEventHandler)
+		AddHandler appDomain_0.UnhandledException, unhandledExceptionEventHandler_1
+	End Sub
+
+	' Token: 0x060007A2 RID: 1954 RVA: 0x004A6ED8 File Offset: 0x004A14D8
+	Function smethod_3(bool_0 As Boolean, string_0 As String, ByRef bool_1 As Boolean) As Mutex
+		Return New Mutex(bool_0, string_0, bool_1)
+	End Function
+
+	' Token: 0x060007A3 RID: 1955 RVA: 0x004A6EF0 File Offset: 0x004A14F0
+	Sub smethod_4()
+		Application.EnableVisualStyles()
+	End Sub
+
+	' Token: 0x060007A4 RID: 1956 RVA: 0x004A6F04 File Offset: 0x004A1504
+	Sub smethod_5(bool_0 As Boolean)
+		Application.SetCompatibleTextRenderingDefault(bool_0)
+	End Sub
+
+	' Token: 0x060007A5 RID: 1957 RVA: 0x004A6F18 File Offset: 0x004A1518
+	Sub smethod_6(control_0 As Control)
+		control_0.Show()
+	End Sub
+
+	' Token: 0x060007A6 RID: 1958 RVA: 0x004A6F2C File Offset: 0x004A152C
+	Sub smethod_7()
+		Application.DoEvents()
+	End Sub
+
+	' Token: 0x060007A7 RID: 1959 RVA: 0x004A6F40 File Offset: 0x004A1540
+	Function smethod_8(threadStart_0 As ThreadStart) As Thread
+		Return New Thread(threadStart_0)
+	End Function
+
+	' Token: 0x060007A8 RID: 1960 RVA: 0x004A6F54 File Offset: 0x004A1554
+	Sub smethod_9(thread_0 As Thread, bool_0 As Boolean)
+		thread_0.IsBackground = bool_0
+	End Sub
+
+	' Token: 0x060007A9 RID: 1961 RVA: 0x004A6F68 File Offset: 0x004A1568
+	Sub smethod_10(thread_0 As Thread)
+		thread_0.Start()
+	End Sub
+
+	' Token: 0x060007AA RID: 1962 RVA: 0x004A6F7C File Offset: 0x004A157C
+	Sub smethod_11(int_0 As Integer)
+		Thread.Sleep(int_0)
+	End Sub
+
+	' Token: 0x060007AB RID: 1963 RVA: 0x004A6F90 File Offset: 0x004A1590
+	Sub smethod_12(form_0 As Form)
+		form_0.Close()
+	End Sub
+
+	' Token: 0x060007AC RID: 1964 RVA: 0x004A6FA4 File Offset: 0x004A15A4
+	Sub smethod_13(component_0 As Component)
+		component_0.Dispose()
+	End Sub
+
+	' Token: 0x060007AD RID: 1965 RVA: 0x004A6FB8 File Offset: 0x004A15B8
+	Sub smethod_14(form_0 As Form)
+		Application.Run(form_0)
+	End Sub
+
+	' Token: 0x060007AE RID: 1966 RVA: 0x004A6FCC File Offset: 0x004A15CC
+	Sub smethod_15(idisposable_0 As IDisposable)
+		idisposable_0.Dispose()
+	End Sub
+
+	' Token: 0x04000583 RID: 1411
+	<CompilerGenerated()>
+	Private unhandledExceptionEventHandler_0 As UnhandledExceptionEventHandler
+
+	' Token: 0x020000F9 RID: 249
+	<CompilerGenerated()>
+	Private NotInheritable Class Class109
+		' Token: 0x06000B8B RID: 2955 RVA: 0x00412494 File Offset: 0x0040CA94
+		Public Sub New()
+		End Sub
+
+		' Token: 0x06000B8C RID: 2956 RVA: 0x004A6FE0 File Offset: 0x004A15E0
+		Public Sub method_0()
+			GClass15.smethod_0(Me.gform3_0)
+			Me.bool_0 = True
+		End Sub
+
+		' Token: 0x04000584 RID: 1412
+		Public gform3_0 As GForm3
+
+		' Token: 0x04000585 RID: 1413
+		Public bool_0 As Boolean
+	End Class
+End Module
