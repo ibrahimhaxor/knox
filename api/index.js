@@ -1,19 +1,42 @@
-// api/index.js - Vercel serverless function
+// api/index.js - Universal handler for all Knox Wizard requests
 export default function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
-    // Handle preflight OPTIONS request
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    
-    // Log the request (optional, for debugging)
+    // Log what the app is requesting (for debugging)
     console.log('Method:', req.method);
+    console.log('URL:', req.url);
     console.log('Body:', req.body);
     
-    // Return the success response
-    return res.status(200).send('SUCCESS|33365|KnoxWizard_Cracked_By_IbraheemNet}');
+    // Parse the request body to see what action is being requested
+    let action = '';
+    try {
+        if (req.body && req.body.action) {
+            action = req.body.action;
+        }
+    } catch(e) {}
+    
+    // Handle different request types
+    // All return SUCCESS to bypass everything
+    
+    // For algorithm fetching
+    if (action === 'get_patch_algorithms' || req.url.includes('algorithms')) {
+        return res.status(200).json({
+            status: "SUCCESS",
+            algorithms: []  // Empty array - no algorithms to fetch
+        });
+    }
+    
+    // For license validation (main request)
+    if (action === 'get_secure_logic' || req.url.includes('secure')) {
+        return res.status(200).json({
+            status: "SUCCESS",
+            data: "License valid"
+        });
+    }
+    
+    // For update check
+    if (req.url.includes('check_update')) {
+        return res.status(200).send("0.6.8"); // Same version - no update
+    }
+    
+    // Default response for everything else
+    return res.status(200).send('SUCCESS|33365|{KnoxWizard_Cracked_By_IbraheemNet}');
 }
