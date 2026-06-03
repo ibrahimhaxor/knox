@@ -1,5 +1,5 @@
 // Complete Vercel Server for Patched OPay App
-// Handles: /api/v1/transfer/create-order and all cashier endpoints
+// Using exact response formats captured from real OPay server
 
 export default async function handler(req, res) {
     // Only accept POST requests
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     console.log('[!] URL:', url);
     console.log('[!] Time:', new Date().toISOString());
     console.log('[!] Headers:', req.headers);
-    console.log('[!] Body:', req.body);
+    console.log('[!] Body received:', req.body ? 'Yes' : 'No');
     console.log('[!] ==========================================\n');
 
     // Determine which endpoint was called
@@ -28,113 +28,84 @@ export default async function handler(req, res) {
     console.log('[+] Detected endpoint:', endpoint);
 
     // ============================================
-    // Response Templates (Based on captured data)
+    // EXACT RESPONSE FORMATS FROM CAPTURED DATA
     // ============================================
 
-    // Template 1: Transfer Create Order Response
-    const transferResponse = {
-        code: "00000",
-        message: "SUCCESSFUL",
-        data: {
-            orderStatus: "SUCCESS",
-            serviceTypeTitle: "Money transfer",
-            paymentResult: "Transaction is successful!",
-            orderNo: `TFR_${Date.now()}`,
-            orderTime: new Date().toISOString(),
-            orderTimeUnix: Math.floor(Date.now() / 1000),
-            saveBeneficiary: true
-        }
-    };
-
-    // Template 2: Get Payment Info Response
-    const paymentInfoResponse = {
-        code: "00000",
-        message: "SUCCESS",
-        data: {
-            paymentInfo: {
-                orderNo: `PAY_${Date.now()}`,
-                amount: "100.00",
-                currency: "NGN",
-                serviceType: "coinsTransfer",
-                status: "SUCCESS",
-                createdAt: new Date().toISOString()
-            }
-        }
-    };
-
-    // Template 3: Confirm Pay Response
-    const confirmPayResponse = {
-        code: "00000",
-        message: "SUCCESS",
-        data: {
-            orderNo: `CONFIRM_${Date.now()}`,
-            status: "SUCCESS",
-            paymentResult: "Payment confirmed successfully",
-            transactionTime: new Date().toISOString(),
-            reference: `REF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-        }
-    };
-
-    // Template 4: Query Pay Result Response
-    const queryResultResponse = {
-        code: "00000",
-        message: "SUCCESS",
-        data: {
-            orderNo: `QUERY_${Date.now()}`,
-            status: "SUCCESS",
-            orderStatus: "COMPLETED",
-            paymentDetails: {
-                amount: "100.00",
-                currency: "NGN",
-                method: "Wallet",
-                timestamp: new Date().toISOString()
-            }
-        }
-    };
-
-    // Template 5: Show Status Response
-    const showStatusResponse = {
-        code: "00000",
-        message: "SUCCESS",
-        data: {
-            orderId: `STATUS_${Date.now()}`,
-            status: "SUCCESS",
-            currentStatus: "COMPLETED",
-            timeline: [
-                { step: "Initiated", time: new Date().toISOString(), status: "done" },
-                { step: "Processed", time: new Date().toISOString(), status: "done" },
-                { step: "Completed", time: new Date().toISOString(), status: "current" }
-            ]
-        }
-    };
-
-    // Select response based on endpoint
     let responseData;
+
     switch(endpoint) {
-        case 'get_payment_info':
-            responseData = paymentInfoResponse;
-            break;
         case 'confirm_pay':
-            responseData = confirmPayResponse;
+            // EXACT format from your successful capture
+            responseData = {
+                code: "00000",
+                data: {
+                    paymentNo: `260603${Date.now().toString().slice(0,10)}${Math.random().toString(36).substring(2,15)}`,
+                    isPolling: true,
+                    orderNo: `26060301010000${Math.random().toString(36).substring(2,15)}`
+                },
+                message: "SUCCESSFUL"
+            };
             break;
+
+        case 'get_payment_info':
+            responseData = {
+                code: "00000",
+                message: "SUCCESSFUL",
+                data: {
+                    paymentInfo: {
+                        orderNo: `PAY${Date.now()}`,
+                        amount: { currency: "NGN", value: "100.00" },
+                        serviceType: "coinsTransfer",
+                        status: "SUCCESS"
+                    }
+                }
+            };
+            break;
+
         case 'query_pay_result':
-            responseData = queryResultResponse;
+            responseData = {
+                code: "00000",
+                message: "SUCCESSFUL",
+                data: {
+                    orderStatus: "SUCCESS",
+                    orderNo: `QRY${Date.now()}`,
+                    status: "SUCCESS"
+                }
+            };
             break;
+
         case 'showStatus':
-            responseData = showStatusResponse;
+            responseData = {
+                code: "00000",
+                message: "SUCCESSFUL",
+                data: {
+                    orderStatus: "SUCCESS",
+                    status: "SUCCESS"
+                }
+            };
             break;
+
         case 'create-order':
         default:
-            responseData = transferResponse;
+            responseData = {
+                code: "00000",
+                message: "SUCCESSFUL",
+                data: {
+                    orderStatus: "SUCCESS",
+                    orderNo: `TFR${Date.now()}`,
+                    paymentResult: "Transaction is successful!"
+                }
+            };
+            break;
     }
 
-    // For patched app, we can return plain JSON
-    // But to be safe, wrap in the expected format
+    // Convert to JSON and then to base64 for the encrypt_data field
     const plainJson = JSON.stringify(responseData);
     const encrypt_data = Buffer.from(plainJson).toString('base64');
 
     console.log('[+] Sending response for:', endpoint);
-    console.log('[+] Response:', responseData);
+    console.log('[+] Plaintext response:', plainJson);
+    console.log('[+] Encrypted data (base64):', encrypt_data.substring(0, 100) + '...');
 
     // Return in the format the app expects
     return res.status(200).json({
