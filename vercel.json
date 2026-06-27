@@ -1,9 +1,17 @@
 {
-  "version": 2,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/api/v1/transfer/create-order.js"
+      "source": "/a",
+      "destination": "/api"
+    },
+    {
+      "source": "/a/:path*",
+      "destination": "/api"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 10
+    }
+  }
 }
