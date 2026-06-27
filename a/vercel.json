@@ -4,5 +4,10 @@
       "source": "/a/index.js",
       "destination": "/api/login"
     }
-  ]
+  ],
+  "functions": {
+    "api/login.js": {
+      "maxDuration": 10
+    }
+  }
 }
