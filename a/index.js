@@ -1,5 +1,5 @@
-// api/index.js - Universal handler for ALL applications
-export default async function handler(req, res) {
+// a/index.js - Universal handler for ALL applications (Vercel Serverless Function)
+module.exports = async (req, res) => {
     // Enable CORS for all requests
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     let action = '';
     let username = '';
     let token = '';
-    
+
     // Get from body (POST, PUT, PATCH)
     if (req.body) {
         email = req.body.email || req.body.Email || req.body.EMAIL || '';
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         username = req.body.username || req.body.Username || req.body.USERNAME || '';
         token = req.body.token || req.body.Token || req.body.TOKEN || '';
     }
-    
+
     // Get from query parameters (GET, DELETE)
     if (req.query) {
         email = email || req.query.email || req.query.Email || req.query.EMAIL || '';
@@ -363,4 +363,4 @@ export default async function handler(req, res) {
             timestamp: new Date().toISOString()
         }
     });
-      }
+};
