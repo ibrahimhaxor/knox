@@ -1,4 +1,3 @@
-
 // api/login.js
 export default async function handler(req, res) {
   // Enable CORS for your app
@@ -11,17 +10,28 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Only accept POST requests
-  if (req.method !== 'POST') {
+  // Allow both GET and POST
+  if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ 
       status: 'error',
-      message: 'Method not allowed'
+      message: 'Method not allowed. Use GET or POST.'
     });
   }
 
-  const { email, password } = req.body;
+  // Get credentials from query (GET) or body (POST)
+  let email, password;
+  
+  if (req.method === 'GET') {
+    // For GET requests, get from query parameters
+    email = req.query.email;
+    password = req.query.password;
+  } else {
+    // For POST requests, get from body
+    email = req.body.email;
+    password = req.body.password;
+  }
 
-  // Basic validation - just check if fields exist
+  // Basic validation
   if (!email || !password) {
     return res.status(400).json({
       status: 'error',
@@ -40,7 +50,7 @@ export default async function handler(req, res) {
     user: {
       email: email,
       name: 'User',
-      // You can add any other user data here
+      // Add any other user data here
     }
   });
 }
