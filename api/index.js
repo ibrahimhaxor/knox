@@ -1,42 +1,63 @@
-// api/index.js - Universal handler for all Knox Wizard requests
 export default function handler(req, res) {
-    // Log what the app is requesting (for debugging)
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
-    console.log('Body:', req.body);
-    
-    // Parse the request body to see what action is being requested
-    let action = '';
-    try {
-        if (req.body && req.body.action) {
-            action = req.body.action;
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    const url = req.url || '';
+
+    // If request is from /a
+    if (url.includes('/a')) {
+        const email = req.query?.email || req.body?.email || 'test@example.com';
+        return res.status(200).json({
+            success: true,
+            message: 'Access Granted!',
+            status: 'active',
+            user: {
+                email: email,
+                name: 'User',
+                endpoint: '/a'
+            }
+        });
+    }
+
+    // If request is from /api (Knox Wizard)
+    if (url.includes('/api')) {
+        let action = '';
+        try {
+            if (req.body && req.body.action) {
+                action = req.body.action;
+            }
+        } catch(e) {}
+
+        if (action === 'get_patch_algorithms' || req.url.includes('algorithms')) {
+            return res.status(200).json({
+                status: "SUCCESS",
+                algorithms: []
+            });
         }
-    } catch(e) {}
-    
-    // Handle different request types
-    // All return SUCCESS to bypass everything
-    
-    // For algorithm fetching
-    if (action === 'get_patch_algorithms' || req.url.includes('algorithms')) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            algorithms: []  // Empty array - no algorithms to fetch
-        });
+
+        if (action === 'get_secure_logic' || req.url.includes('secure')) {
+            return res.status(200).json({
+                status: "SUCCESS",
+                data: "License valid"
+            });
+        }
+
+        if (req.url.includes('check_update')) {
+            return res.status(200).send("0.6.8");
+        }
+
+        return res.status(200).send('SUCCESS|33365|Cracked by ibrahimnet');
     }
-    
-    // For license validation (main request)
-    if (action === 'get_secure_logic' || req.url.includes('secure')) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            data: "License valid"
-        });
-    }
-    
-    // For update check
-    if (req.url.includes('check_update')) {
-        return res.status(200).send("0.6.8"); // Same version - no update
-    }
-    
-    // Default response for everything else
-    return res.status(200).send('SUCCESS|33365|{KnoxWizard_Cracked_By_IbraheemNet}');
+
+    // Default response
+    return res.status(200).json({
+        success: true,
+        message: 'Request processed',
+        path: url
+    });
 }
