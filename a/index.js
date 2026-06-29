@@ -16,7 +16,7 @@ module.exports = function handler(req, res) {
         status: 'active',
         user: {
             email: email,
-            name: 'User',
+            name: 'Users',
             endpoint: '/a'
         }
     });
