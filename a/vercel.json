@@ -1,8 +1,0 @@
-{
-  "functions": {
-    "a/index.js": {
-      "maxDuration": 10,
-      "runtime": "nodejs18.x"
-    }
-  }
-}

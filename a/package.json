@@ -1,7 +1,0 @@
-{
-  "name": "knox-api",
-  "version": "1.0.0",
-  "scripts": {
-    "vercel-build": "echo hello"
-  }
-}
