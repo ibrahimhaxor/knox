@@ -38,5 +38,5 @@ export default function handler(req, res) {
     }
     
     // Default response for everything else
-    return res.status(200).send('SUCCESS|Expires: 2028-06-08 (732 Days Left)');
+    return res.status(200).send('SUCCESS|Expires:2028-06-08(732 Days Left)');
 }
