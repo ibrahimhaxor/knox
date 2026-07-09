@@ -34,7 +34,7 @@ export default function handler(req, res) {
     
     // For update check
     if (req.url.includes('check_update')) {
-        return res.status(200).send("0.6.8"); // Same version - no update
+        return res.status(200).send("0.7.93"); // Same version - no update
     }
     
     // Default response for everything else
