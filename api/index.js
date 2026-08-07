@@ -7,7 +7,7 @@ export default function handler(req, res) {
 
 
     // GET /360/v
-    if (path === "/360/v" && req.method === "GET") {
+    if (path === "/360/version" && req.method === "GET") {
         return res.status(200).json({
             version: "1.1.8",
             url: "https://www.mediafire.com/file/rqr0wr8uc4zq0op/360-tool-v1.2.1_fixed.zip/file"
@@ -16,7 +16,7 @@ export default function handler(req, res) {
 
 
     // POST /360/l
-    if (path === "/360/l" && req.method === "POST") {
+    if (path === "/360/login12" && req.method === "POST") {
 
         const now = new Date();
         const time = now.toISOString()
