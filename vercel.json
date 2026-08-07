@@ -9,11 +9,11 @@
   ],
   "routes": [
     {
-      "src": "/360/v",
+      "src": "/360/version",
       "dest": "/api/index.js"
     },
     {
-      "src": "/360/l",
+      "src": "/360/login12",
       "dest": "/api/index.js"
     },
     {
