@@ -33,7 +33,7 @@ export default function handler(req, res) {
             lock_expiry: "2099-01-01 00:00:00",
             login_time: time,
             license_expiry: "2099-01-01 00:00:00",
-            credits: 999999
+            credits: 250
         });
     }
 
