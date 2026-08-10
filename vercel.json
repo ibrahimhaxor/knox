@@ -8,19 +8,19 @@
   ],
   "routes": [
     {
-      "src": "/360/v",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/360/l",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/360/credit1234567",
+      "src": "/360/version",
       "dest": "/api/index.js"
     },
     {
       "src": "/360/login12",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/360/login13",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/360/credit1234567",
       "dest": "/api/index.js"
     },
     {
