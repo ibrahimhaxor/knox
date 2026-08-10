@@ -21,7 +21,7 @@ if (
     return res.status(200).json({
      "success": true,
   "message": "OK",
-  "operation": "check",
+  "operation": "spd",
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
   "cost": 2,
   "credits_used": 2,
