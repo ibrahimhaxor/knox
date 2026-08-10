@@ -23,9 +23,9 @@ if (
         message: "OK",
         operation: "spd",
         credits: 250,
-        balance: 249,
-        credits_left: 249,
-        confirmed_balance: 249,
+        balance: 248,
+        credits_left: 248,
+        confirmed_balance: 248,
         license_expiry: "2099-01-01 00:00:00",
         lock_expiry: "2099-01-01 00:00:00"
     });
