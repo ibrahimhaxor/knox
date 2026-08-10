@@ -21,7 +21,7 @@ if (
     return res.status(200).json({
         success: true,
         message: "OK",
-        operation: "check",
+        operation: "spd",
         credits: 250,
         balance: 250,
         credits_left: 250,
