@@ -25,7 +25,7 @@ if (
         credits: 250,
         balance: 250,
         credits_left: 249,
-        confirmed_balance: 250,
+        confirmed_balance: 249,
         license_expiry: "2099-01-01 00:00:00",
         lock_expiry: "2099-01-01 00:00:00"
     });
