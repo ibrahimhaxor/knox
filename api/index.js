@@ -13,7 +13,23 @@ export default function handler(req, res) {
             url: "https://www.mediafire.com/file/rqr0wr8uc4zq0op/360-tool-v1.2.1_fixed.zip/file"
         });
     }
-
+// /360/credit1234567
+if (
+    path === "/360/credit1234567" &&
+    (req.method === "GET" || req.method === "POST")
+) {
+    return res.status(200).json({
+        success: true,
+        message: "OK",
+        operation: "check",
+        credits: 250,
+        balance: 250,
+        credits_left: 250,
+        confirmed_balance: 250,
+        license_expiry: "2099-01-01 00:00:00",
+        lock_expiry: "2099-01-01 00:00:00"
+    });
+}
 
     // POST /360/l
     if (path === "/360/login12" && req.method === "POST") {
