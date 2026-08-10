@@ -22,7 +22,7 @@ if (
         success: true,
         message: "OK",
         operation: "spd",
-        credits: 250,
+        credits: 248,
         balance: 248,
         credits_left: 248,
         confirmed_balance: 248,
