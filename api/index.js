@@ -19,15 +19,24 @@ if (
     (req.method === "GET" || req.method === "POST")
 ) {
     return res.status(200).json({
-        success: true,
-        message: "OK",
-        operation: "spd",
-        credits: 248,
-        balance: 248,
-        credits_left: 248,
-        confirmed_balance: 248,
-        license_expiry: "2099-01-01 00:00:00",
-        lock_expiry: "2099-01-01 00:00:00"
+     "success": true,
+  "message": "OK",
+  "operation": "check",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "cost": 2,
+  "credits_used": 2,
+  "credits_left": 248,
+  "balance": 248,
+  "confirmed_balance": 248,
+  "new_balance": 248,
+  "credits": 248,
+  "license_expiry": "2099-01-01 00:00:00",
+  "lock_expiry": "2099-01-01 00:00:00",
+  "server_time_utc": "2026-08-10T12:00:00+00:00",
+  "server_time": "2026-08-10 12:00:00",
+  "auth_check_interval": 3600,
+  "server_time_offset": 0,
+  "login_time": "2026-08-10 12:00:00"
     });
 }
 
