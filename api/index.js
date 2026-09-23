@@ -1,12 +1,107 @@
 export default function handler(req, res) {
 
     const path = req.url.split("?")[0];
+    const query = req.query || {};
+    const endpoint = query.endpoint || "";
 
     console.log("METHOD:", req.method);
     console.log("PATH:", path);
+    console.log("ENDPOINT:", endpoint);
     console.log("BODY:", req.body);
 
-    // GET /360/version
+    // ============================================
+    // SMARTTOOL API ROUTES (status, system_update, login)
+    // ============================================
+
+    // GET /smarttool-api/?endpoint=status
+    if (path === "/smarttool-api/" && endpoint === "status" && req.method === "GET") {
+        const now = new Date();
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(now.getTime() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                status: "online",
+                server_time: now.toISOString().replace("T", " ").substring(0, 19),
+                server: "knox-sigma.vercel.app",
+                database: "connected",
+                version: "2.1",
+                endpoints: [
+                    "/?endpoint=status",
+                    "/?endpoint=validate",
+                    "/?endpoint=login",
+                    "/?endpoint=system_update",
+                    "/?endpoint=check_binding",
+                    "/?endpoint=create_binding",
+                    "/?endpoint=log_activity",
+                    "/?endpoint=stats",
+                    "/?endpoint=get-licenses",
+                    "/?endpoint=create-license"
+                ]
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=system_update
+    if (path === "/smarttool-api/" && endpoint === "system_update" && req.method === "POST") {
+        const now = new Date();
+        const clientVersion = req.body?.client_version || "26.5.0";
+        const latestVersion = "26.5.0";
+        const minVersion = "26.5.0";
+        const updateRequired = clientVersion < minVersion;
+
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(now.getTime() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                update_required: updateRequired,
+                blocking_update: false,
+                min_version_required: minVersion,
+                latest_version: latestVersion,
+                update_urgency: "critical",
+                maintenance_mode: false,
+                message: "🔥Smarttool v26.5.0🔥\r\n\r\nDIAG MODE ADDED READ AND WRITE and UNLOCK BL VIA DIAG\r\n GOOD DAY\r\n\r\n",
+                update_url: "https://knox-sigma.vercel.app/update.php",
+                block_old_versions: true,
+                client_version: clientVersion,
+                server_checked: true,
+                explanation: updateRequired
+                    ? `Your version (v${clientVersion}) is below the minimum requirement (v${minVersion}).`
+                    : `Your version (v${clientVersion}) meets the minimum requirement (v${minVersion}).`
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=login
+    if (path === "/smarttool-api/" && endpoint === "login" && req.method === "POST") {
+        const now = new Date();
+        const username = req.body?.username || "unknown";
+        const fingerprint = generateUUID().replace(/-/g, "");
+
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(now.getTime() / 1000),
+            server: "smarttool.top",
+            data: {
+                user_id: "12345",
+                username: username,
+                email: `${username}@smarttool.top`,
+                user_type: "premium",
+                session_token: `sess_${generateUUID().replace(/-/g, "")}`,
+                credits: 280,
+                balance: 280,
+                expire_date: "2027-12-31",
+                days_remaining: 365,
+                computer_fingerprint: fingerprint,
+                binding_allowed: true
+            }
+        });
+    }
+
+    // ============================================
+    // /360/version
+    // ============================================
     if (path === "/360/version" && req.method === "GET") {
         return res.status(200).json({
             version: "1.1.8",
@@ -18,14 +113,12 @@ export default function handler(req, res) {
     // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
     // ============================================
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-        
-        // Get operation from request body
+
         const operation = req.body?.operation || 'spd';
         const request_id = req.body?.request_id || generateUUID();
         const cost = req.body?.cost || 2;
         const now = new Date();
 
-        // Base response
         const response = {
             success: true,
             message: "OK",
@@ -47,25 +140,18 @@ export default function handler(req, res) {
             login_time: now.toISOString().replace("T", " ").substring(0, 19)
         };
 
-        // ============================================
-        // OPERATION ROUTING: SPD, MTK, META
-        // ============================================
         if (operation === "spd") {
             response.message = "SPD operation successful";
             response.operation = "spd";
-            
         } else if (operation === "mtk") {
             response.message = "MTK operation successful";
             response.operation = "mtk";
-            
         } else if (operation === "meta_fix_blackscreen") {
             response.message = "Meta fix blackscreen operation successful";
             response.operation = "meta_fix_blackscreen";
             response.meta_status = "fixed";
             response.blackscreen_fix = "applied";
-            
         } else {
-            // Default fallback for any other operation
             response.message = "Operation successful";
             response.operation = operation;
         }
@@ -73,13 +159,12 @@ export default function handler(req, res) {
         return res.status(200).json(response);
     }
 
-    // POST /360/login12
+    // ============================================
+    // /360/login12
+    // ============================================
     if (path === "/360/login12" && req.method === "POST") {
-
         const now = new Date();
-        const time = now.toISOString()
-            .replace("T", " ")
-            .substring(0, 19);
+        const time = now.toISOString().replace("T", " ").substring(0, 19);
 
         return res.status(200).json({
             success: true,
