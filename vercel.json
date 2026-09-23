@@ -24,6 +24,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/smarttool-api/?(.*)",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/index.js"
     }
