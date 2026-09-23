@@ -10,7 +10,7 @@ export default function handler(req, res) {
     console.log("BODY:", req.body);
 
     // ============================================
-    // SMARTTOOL API ROUTES (status, system_update, login)
+    // SMARTTOOL API ROUTES
     // ============================================
 
     // GET /smarttool-api/?endpoint=status
@@ -99,6 +99,132 @@ export default function handler(req, res) {
         });
     }
 
+    // POST /smarttool-api/?endpoint=check_binding
+    if (path === "/smarttool-api/" && endpoint === "check_binding" && req.method === "POST") {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                binding_allowed: true,
+                can_login: true,
+                requires_binding: false,
+                fingerprint: req.body?.computer_fingerprint || generateUUID().replace(/-/g, "")
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=create_binding
+    if (path === "/smarttool-api/" && endpoint === "create_binding" && req.method === "POST") {
+        const now = new Date();
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(now.getTime() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                binding_created: true,
+                fingerprint: req.body?.computer_fingerprint || generateUUID().replace(/-/g, ""),
+                bound_at: now.toISOString().replace("T", " ").substring(0, 19)
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=validate
+    if (path === "/smarttool-api/" && endpoint === "validate" && req.method === "POST") {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                valid: true,
+                license_valid: true,
+                message: "License valid"
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=log_activity
+    if (path === "/smarttool-api/" && endpoint === "log_activity" && req.method === "POST") {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                logged: true
+            }
+        });
+    }
+
+    // POST /smarttool-api/?endpoint=create-license
+    if (path === "/smarttool-api/" && endpoint === "create-license" && req.method === "POST") {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                license_created: true,
+                license_key: generateUUID().toUpperCase(),
+                expire_date: "2027-12-31"
+            }
+        });
+    }
+
+    // GET /smarttool-api/?endpoint=get_user_info | get_user_profile | get-licenses
+    if (
+        path === "/smarttool-api/" &&
+        (endpoint === "get_user_info" || endpoint === "get_user_profile" || endpoint === "get-licenses") &&
+        req.method === "GET"
+    ) {
+        const username = query.username || "ibrahimnet";
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                user_id: "12345",
+                username,
+                email: `${username}@smarttool.top`,
+                user_type: "premium",
+                credits: 999,
+                balance: 999,
+                expire_date: "2027-12-31",
+                days_remaining: 365
+            }
+        });
+    }
+
+    // GET /smarttool-api/?endpoint=stats | get_user_credits
+    if (
+        path === "/smarttool-api/" &&
+        (endpoint === "stats" || endpoint === "get_user_credits") &&
+        req.method === "GET"
+    ) {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                credits: 999,
+                balance: 999
+            }
+        });
+    }
+
+    // ============================================
+    // SMARTTOOL CATCH-ALL FALLBACK (must be AFTER all specific smarttool endpoints)
+    // ============================================
+    if (path.startsWith("/smarttool-api")) {
+        return res.status(200).json({
+            success: true,
+            timestamp: Math.floor(Date.now() / 1000),
+            server: "knox-sigma.vercel.app",
+            data: {
+                credits: 999,
+                balance: 999
+            }
+        });
+    }
+
     // ============================================
     // /360/version
     // ============================================
@@ -180,7 +306,30 @@ export default function handler(req, res) {
         });
     }
 
-    // ---- YOUR EXISTING CODE BELOW ----
+    // ============================================
+    // /360/login13 (alias to login12)
+    // ============================================
+    if (path === "/360/login13" && req.method === "POST") {
+        const now = new Date();
+        const time = now.toISOString().replace("T", " ").substring(0, 19);
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful!",
+            server_time_utc: now.toISOString(),
+            server_time: time,
+            server_time_offset: 0,
+            auth_check_interval: 3600,
+            lock_expiry: "2099-01-01 00:00:00",
+            login_time: time,
+            license_expiry: "2099-01-01 00:00:00",
+            credits: 250
+        });
+    }
+
+    // ============================================
+    // LEGACY / GENERIC FALLBACKS
+    // ============================================
 
     let action = "";
 
@@ -188,7 +337,7 @@ export default function handler(req, res) {
         if (req.body && req.body.action) {
             action = req.body.action;
         }
-    } catch(e) {}
+    } catch (e) {}
 
     if (action === "get_patch_algorithms" || req.url.includes("algorithms")) {
         return res.status(200).json({
@@ -216,7 +365,7 @@ export default function handler(req, res) {
 // HELPER FUNCTION
 // ============================================
 function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
