@@ -110,17 +110,20 @@ export default function handler(req, res) {
     // ============================================
     // POST /smarttool-api/?endpoint=login
     // Returns BOTH flat fields AND nested user object.
-    // Includes MANY expiry aliases so client always finds one.
     // ============================================
     if (isSmarttool && endpoint === "login" && req.method === "POST") {
         const now = new Date();
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
-
         const username = req.body?.username || "unknown";
         const sessionToken = `sess_${generateUUID().replace(/-/g, "")}`;
         const userId = "12345";
         const email = `${username}@smarttool.top`;
         const fingerprint = generateUUID().replace(/-/g, "");
+
+        const credits = 280;
+        const balance = 280;
+        const expireDateOnly = "2027-12-31";
+        const expireStr = "2027-12-31 00:00:00";
+        const daysRemaining = 365;
 
         return res.status(200).json({
             success: true,
@@ -133,10 +136,8 @@ export default function handler(req, res) {
                 email: email,
                 user_type: "premium",
                 session_token: sessionToken,
-                credits: 9999,
-                balance: 9999,
-
-                // Expiry aliases
+                credits: credits,
+                balance: balance,
                 expire_date: expireDateOnly,
                 expiry_date: expireDateOnly,
                 expiration_date: expireDateOnly,
@@ -157,8 +158,8 @@ export default function handler(req, res) {
                     username: username,
                     email: email,
                     user_type: "premium",
-                    credits: 9999,
-                    balance: 9999,
+                    credits: credits,
+                    balance: balance,
                     expire_date: expireDateOnly,
                     expiry_date: expireDateOnly,
                     expiration_date: expireDateOnly,
@@ -175,15 +176,19 @@ export default function handler(req, res) {
 
     // ============================================
     // POST /smarttool-api/?endpoint=check_binding
-    // Echoes back user_id + expiry info
     // ============================================
     if (isSmarttool && endpoint === "check_binding" && req.method === "POST") {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const userId =
             req.body?.user_id ||
             req.body?.user?.id ||
             req.body?.user?.user_id ||
             "12345";
+
+        const credits = 280;
+        const balance = 280;
+        const expireDateOnly = "2027-12-31";
+        const expireStr = "2027-12-31 00:00:00";
+        const daysRemaining = 365;
 
         return res.status(200).json({
             success: true,
@@ -197,8 +202,8 @@ export default function handler(req, res) {
                 fingerprint:
                     req.body?.computer_fingerprint ||
                     generateUUID().replace(/-/g, ""),
-
-                // Expiry aliases
+                credits: credits,
+                balance: balance,
                 expire_date: expireDateOnly,
                 expiry_date: expireDateOnly,
                 expiration_date: expireDateOnly,
@@ -209,10 +214,11 @@ export default function handler(req, res) {
                 remaining_days: daysRemaining,
                 days: daysRemaining,
 
-                // Nested user for consistency
                 user: {
                     id: userId,
                     user_id: userId,
+                    credits: credits,
+                    balance: balance,
                     expire_date: expireDateOnly,
                     expiry_date: expireDateOnly,
                     expiration_date: expireDateOnly,
@@ -230,11 +236,15 @@ export default function handler(req, res) {
     // POST /smarttool-api/?endpoint=create_binding
     if (isSmarttool && endpoint === "create_binding" && req.method === "POST") {
         const now = new Date();
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const userId =
             req.body?.user_id ||
             req.body?.user?.id ||
             "12345";
+        const credits = 280;
+        const balance = 280;
+        const expireDateOnly = "2027-12-31";
+        const expireStr = "2027-12-31 00:00:00";
+        const daysRemaining = 365;
 
         return res.status(200).json({
             success: true,
@@ -247,6 +257,8 @@ export default function handler(req, res) {
                     req.body?.computer_fingerprint ||
                     generateUUID().replace(/-/g, ""),
                 bound_at: now.toISOString().replace("T", " ").substring(0, 19),
+                credits: credits,
+                balance: balance,
                 expire_date: expireDateOnly,
                 license_expiry: expireStr,
                 days_remaining: daysRemaining,
@@ -258,7 +270,6 @@ export default function handler(req, res) {
 
     // POST /smarttool-api/?endpoint=validate
     if (isSmarttool && endpoint === "validate" && req.method === "POST") {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -267,11 +278,13 @@ export default function handler(req, res) {
                 valid: true,
                 license_valid: true,
                 message: "License valid",
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining
+                credits: 280,
+                balance: 280,
+                expire_date: "2027-12-31",
+                license_expiry: "2027-12-31 00:00:00",
+                days_remaining: 365,
+                days_left: 365,
+                remaining_days: 365
             }
         });
     }
@@ -290,7 +303,6 @@ export default function handler(req, res) {
 
     // POST /smarttool-api/?endpoint=create-license
     if (isSmarttool && endpoint === "create-license" && req.method === "POST") {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(3);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -298,9 +310,11 @@ export default function handler(req, res) {
             data: {
                 license_created: true,
                 license_key: generateUUID().toUpperCase(),
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining
+                credits: 280,
+                balance: 280,
+                expire_date: "2027-12-31",
+                license_expiry: "2027-12-31 00:00:00",
+                days_remaining: 365
             }
         });
     }
@@ -313,10 +327,14 @@ export default function handler(req, res) {
         (endpoint === "get_user_info" || endpoint === "get_user_profile" || endpoint === "get-licenses") &&
         req.method === "GET"
     ) {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const username = query.username || "ibrahimnet";
         const userId = "1337";
         const email = `${username}@smarttool.top`;
+        const credits = 280;
+        const balance = 280;
+        const expireDateOnly = "2027-12-31";
+        const expireStr = "2027-12-31 00:00:00";
+        const daysRemaining = 365;
 
         return res.status(200).json({
             success: true,
@@ -325,10 +343,8 @@ export default function handler(req, res) {
                 username: username,
                 email: email,
                 user_type: "user",
-                credits: 185,
-                balance: 185,
-
-                // Expiry aliases
+                credits: credits,
+                balance: balance,
                 expire_date: expireDateOnly,
                 expiry_date: expireDateOnly,
                 expiration_date: expireDateOnly,
@@ -339,15 +355,14 @@ export default function handler(req, res) {
                 remaining_days: daysRemaining,
                 days: daysRemaining,
 
-                // Nested user object
                 user: {
                     id: userId,
                     user_id: userId,
                     username: username,
                     email: email,
                     user_type: "user",
-                    credits: 185,
-                    balance: 185,
+                    credits: credits,
+                    balance: balance,
                     expire_date: expireDateOnly,
                     expiry_date: expireDateOnly,
                     expiration_date: expireDateOnly,
@@ -368,19 +383,18 @@ export default function handler(req, res) {
         (endpoint === "stats" || endpoint === "get_user_credits") &&
         req.method === "GET"
     ) {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                credits: 185,
-                balance: 185,
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining
+                credits: 280,
+                balance: 280,
+                expire_date: "2027-12-31",
+                license_expiry: "2027-12-31 00:00:00",
+                days_remaining: 365,
+                days_left: 365,
+                remaining_days: 365
             }
         });
     }
@@ -389,19 +403,18 @@ export default function handler(req, res) {
     // SMARTTOOL CATCH-ALL FALLBACK
     // ============================================
     if (isSmarttool) {
-        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                credits: 185,
-                balance: 185,
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining
+                credits: 280,
+                balance: 280,
+                expire_date: "2027-12-31",
+                license_expiry: "2027-12-31 00:00:00",
+                days_remaining: 365,
+                days_left: 365,
+                remaining_days: 365
             }
         });
     }
