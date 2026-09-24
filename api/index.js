@@ -24,6 +24,19 @@ export default function handler(req, res) {
         rawPath.startsWith("/smarttool-api/index1.php");
 
     // ============================================
+    // SHARED HELPERS (expiry computation)
+    // ============================================
+    function computeExpiry(yearsAhead) {
+        const now = new Date();
+        const exp = new Date(now.getTime());
+        exp.setFullYear(exp.getFullYear() + yearsAhead);
+        const expireStr = exp.toISOString().replace("T", " ").substring(0, 19);
+        const expireDateOnly = exp.toISOString().substring(0, 10);
+        const daysRemaining = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return { expireStr, expireDateOnly, daysRemaining };
+    }
+
+    // ============================================
     // SMARTTOOL API ROUTES
     // ============================================
 
@@ -96,11 +109,13 @@ export default function handler(req, res) {
 
     // ============================================
     // POST /smarttool-api/?endpoint=login
-    // Returns BOTH flat fields AND nested user object
-    // so current_user.json -> data.user works
+    // Returns BOTH flat fields AND nested user object.
+    // Includes MANY expiry aliases so client always finds one.
     // ============================================
     if (isSmarttool && endpoint === "login" && req.method === "POST") {
         const now = new Date();
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
+
         const username = req.body?.username || "unknown";
         const sessionToken = `sess_${generateUUID().replace(/-/g, "")}`;
         const userId = "12345";
@@ -120,8 +135,18 @@ export default function handler(req, res) {
                 session_token: sessionToken,
                 credits: 9999,
                 balance: 9999,
-                expire_date: "2027-12-31",
-                days_remaining: 365,
+
+                // Expiry aliases
+                expire_date: expireDateOnly,
+                expiry_date: expireDateOnly,
+                expiration_date: expireDateOnly,
+                license_expiry: expireStr,
+                license_expire_date: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining,
+                days: daysRemaining,
+
                 computer_fingerprint: fingerprint,
                 binding_allowed: true,
 
@@ -134,8 +159,15 @@ export default function handler(req, res) {
                     user_type: "premium",
                     credits: 9999,
                     balance: 9999,
-                    expire_date: "2027-12-31",
-                    days_remaining: 365
+                    expire_date: expireDateOnly,
+                    expiry_date: expireDateOnly,
+                    expiration_date: expireDateOnly,
+                    license_expiry: expireStr,
+                    license_expire_date: expireStr,
+                    days_remaining: daysRemaining,
+                    days_left: daysRemaining,
+                    remaining_days: daysRemaining,
+                    days: daysRemaining
                 }
             }
         });
@@ -143,14 +175,16 @@ export default function handler(req, res) {
 
     // ============================================
     // POST /smarttool-api/?endpoint=check_binding
-    // Echoes back user_id so client never gets None
+    // Echoes back user_id + expiry info
     // ============================================
     if (isSmarttool && endpoint === "check_binding" && req.method === "POST") {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const userId =
             req.body?.user_id ||
             req.body?.user?.id ||
             req.body?.user?.user_id ||
             "12345";
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -162,7 +196,33 @@ export default function handler(req, res) {
                 requires_binding: false,
                 fingerprint:
                     req.body?.computer_fingerprint ||
-                    generateUUID().replace(/-/g, "")
+                    generateUUID().replace(/-/g, ""),
+
+                // Expiry aliases
+                expire_date: expireDateOnly,
+                expiry_date: expireDateOnly,
+                expiration_date: expireDateOnly,
+                license_expiry: expireStr,
+                license_expire_date: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining,
+                days: daysRemaining,
+
+                // Nested user for consistency
+                user: {
+                    id: userId,
+                    user_id: userId,
+                    expire_date: expireDateOnly,
+                    expiry_date: expireDateOnly,
+                    expiration_date: expireDateOnly,
+                    license_expiry: expireStr,
+                    license_expire_date: expireStr,
+                    days_remaining: daysRemaining,
+                    days_left: daysRemaining,
+                    remaining_days: daysRemaining,
+                    days: daysRemaining
+                }
             }
         });
     }
@@ -170,10 +230,12 @@ export default function handler(req, res) {
     // POST /smarttool-api/?endpoint=create_binding
     if (isSmarttool && endpoint === "create_binding" && req.method === "POST") {
         const now = new Date();
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const userId =
             req.body?.user_id ||
             req.body?.user?.id ||
             "12345";
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(now.getTime() / 1000),
@@ -184,13 +246,19 @@ export default function handler(req, res) {
                 fingerprint:
                     req.body?.computer_fingerprint ||
                     generateUUID().replace(/-/g, ""),
-                bound_at: now.toISOString().replace("T", " ").substring(0, 19)
+                bound_at: now.toISOString().replace("T", " ").substring(0, 19),
+                expire_date: expireDateOnly,
+                license_expiry: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining
             }
         });
     }
 
     // POST /smarttool-api/?endpoint=validate
     if (isSmarttool && endpoint === "validate" && req.method === "POST") {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -198,7 +266,12 @@ export default function handler(req, res) {
             data: {
                 valid: true,
                 license_valid: true,
-                message: "License valid"
+                message: "License valid",
+                expire_date: expireDateOnly,
+                license_expiry: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining
             }
         });
     }
@@ -217,6 +290,7 @@ export default function handler(req, res) {
 
     // POST /smarttool-api/?endpoint=create-license
     if (isSmarttool && endpoint === "create-license" && req.method === "POST") {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(3);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -224,20 +298,22 @@ export default function handler(req, res) {
             data: {
                 license_created: true,
                 license_key: generateUUID().toUpperCase(),
-                expire_date: "2027-12-31"
+                expire_date: expireDateOnly,
+                license_expiry: expireStr,
+                days_remaining: daysRemaining
             }
         });
     }
 
     // ============================================
     // GET /smarttool-api/index1.php?endpoint=get_user_info&username=
-    // (and also /smarttool-api/?endpoint=get_user_info | get_user_profile | get-licenses)
     // ============================================
     if (
         isSmarttool &&
         (endpoint === "get_user_info" || endpoint === "get_user_profile" || endpoint === "get-licenses") &&
         req.method === "GET"
     ) {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         const username = query.username || "ibrahimnet";
         const userId = "1337";
         const email = `${username}@smarttool.top`;
@@ -251,9 +327,19 @@ export default function handler(req, res) {
                 user_type: "user",
                 credits: 185,
                 balance: 185,
-                expire_date: "2030-12-31",
-                days_remaining: 999,
-                // Nested user object for clients expecting data.user
+
+                // Expiry aliases
+                expire_date: expireDateOnly,
+                expiry_date: expireDateOnly,
+                expiration_date: expireDateOnly,
+                license_expiry: expireStr,
+                license_expire_date: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining,
+                days: daysRemaining,
+
+                // Nested user object
                 user: {
                     id: userId,
                     user_id: userId,
@@ -262,8 +348,15 @@ export default function handler(req, res) {
                     user_type: "user",
                     credits: 185,
                     balance: 185,
-                    expire_date: "2030-12-31",
-                    days_remaining: 999
+                    expire_date: expireDateOnly,
+                    expiry_date: expireDateOnly,
+                    expiration_date: expireDateOnly,
+                    license_expiry: expireStr,
+                    license_expire_date: expireStr,
+                    days_remaining: daysRemaining,
+                    days_left: daysRemaining,
+                    remaining_days: daysRemaining,
+                    days: daysRemaining
                 }
             }
         });
@@ -275,28 +368,40 @@ export default function handler(req, res) {
         (endpoint === "stats" || endpoint === "get_user_credits") &&
         req.method === "GET"
     ) {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
                 credits: 185,
-                balance: 185
+                balance: 185,
+                expire_date: expireDateOnly,
+                license_expiry: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining
             }
         });
     }
 
     // ============================================
-    // SMARTTOOL CATCH-ALL FALLBACK (must be AFTER all specific smarttool endpoints)
+    // SMARTTOOL CATCH-ALL FALLBACK
     // ============================================
     if (isSmarttool) {
+        const { expireStr, expireDateOnly, daysRemaining } = computeExpiry(10);
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
                 credits: 185,
-                balance: 185
+                balance: 185,
+                expire_date: expireDateOnly,
+                license_expiry: expireStr,
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining
             }
         });
     }
