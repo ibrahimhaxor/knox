@@ -94,10 +94,17 @@ export default function handler(req, res) {
         });
     }
 
+    // ============================================
     // POST /smarttool-api/?endpoint=login
+    // Returns BOTH flat fields AND nested user object
+    // so current_user.json -> data.user works
+    // ============================================
     if (isSmarttool && endpoint === "login" && req.method === "POST") {
         const now = new Date();
         const username = req.body?.username || "unknown";
+        const sessionToken = `sess_${generateUUID().replace(/-/g, "")}`;
+        const userId = "12345";
+        const email = `${username}@smarttool.top`;
         const fingerprint = generateUUID().replace(/-/g, "");
 
         return res.status(200).json({
@@ -105,32 +112,57 @@ export default function handler(req, res) {
             timestamp: Math.floor(now.getTime() / 1000),
             server: "smarttool.top",
             data: {
-                user_id: "12345",
+                // ---- Flat fields (direct access) ----
+                user_id: userId,
                 username: username,
-                email: `${username}@smarttool.top`,
+                email: email,
                 user_type: "premium",
-                session_token: `sess_${generateUUID().replace(/-/g, "")}`,
-                credits: 280,
-                balance: 280,
+                session_token: sessionToken,
+                credits: 9999,
+                balance: 9999,
                 expire_date: "2027-12-31",
                 days_remaining: 365,
                 computer_fingerprint: fingerprint,
-                binding_allowed: true
+                binding_allowed: true,
+
+                // ---- Nested user object (for current_user.json) ----
+                user: {
+                    id: userId,
+                    user_id: userId,
+                    username: username,
+                    email: email,
+                    user_type: "premium",
+                    credits: 9999,
+                    balance: 9999,
+                    expire_date: "2027-12-31",
+                    days_remaining: 365
+                }
             }
         });
     }
 
+    // ============================================
     // POST /smarttool-api/?endpoint=check_binding
+    // Echoes back user_id so client never gets None
+    // ============================================
     if (isSmarttool && endpoint === "check_binding" && req.method === "POST") {
+        const userId =
+            req.body?.user_id ||
+            req.body?.user?.id ||
+            req.body?.user?.user_id ||
+            "12345";
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
+                user_id: userId,
                 binding_allowed: true,
                 can_login: true,
                 requires_binding: false,
-                fingerprint: req.body?.computer_fingerprint || generateUUID().replace(/-/g, "")
+                fingerprint:
+                    req.body?.computer_fingerprint ||
+                    generateUUID().replace(/-/g, "")
             }
         });
     }
@@ -138,13 +170,20 @@ export default function handler(req, res) {
     // POST /smarttool-api/?endpoint=create_binding
     if (isSmarttool && endpoint === "create_binding" && req.method === "POST") {
         const now = new Date();
+        const userId =
+            req.body?.user_id ||
+            req.body?.user?.id ||
+            "12345";
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(now.getTime() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
+                user_id: userId,
                 binding_created: true,
-                fingerprint: req.body?.computer_fingerprint || generateUUID().replace(/-/g, ""),
+                fingerprint:
+                    req.body?.computer_fingerprint ||
+                    generateUUID().replace(/-/g, ""),
                 bound_at: now.toISOString().replace("T", " ").substring(0, 19)
             }
         });
@@ -200,17 +239,32 @@ export default function handler(req, res) {
         req.method === "GET"
     ) {
         const username = query.username || "ibrahimnet";
+        const userId = "1337";
+        const email = `${username}@smarttool.top`;
+
         return res.status(200).json({
             success: true,
             data: {
-                user_id: "1337",
+                user_id: userId,
                 username: username,
-                email: `${username}@smarttool.top`,
+                email: email,
                 user_type: "user",
                 credits: 185,
                 balance: 185,
                 expire_date: "2030-12-31",
-                days_remaining: 999
+                days_remaining: 999,
+                // Nested user object for clients expecting data.user
+                user: {
+                    id: userId,
+                    user_id: userId,
+                    username: username,
+                    email: email,
+                    user_type: "user",
+                    credits: 185,
+                    balance: 185,
+                    expire_date: "2030-12-31",
+                    days_remaining: 999
+                }
             }
         });
     }
