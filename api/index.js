@@ -24,16 +24,112 @@ export default function handler(req, res) {
         rawPath.startsWith("/smarttool-api/index1.php");
 
     // ============================================
-    // SHARED HELPERS (expiry computation)
+    // SHARED PAYLOAD BUILDER
+    // All expiry aliases + credits + balance + nested user object
     // ============================================
-    function computeExpiry(yearsAhead) {
+    function buildUserPayload(username, userId, userType) {
+        const credits = 280;
+        const balance = 280;
+
+        // Real future expiry (10 years from now)
         const now = new Date();
-        const exp = new Date(now.getTime());
-        exp.setFullYear(exp.getFullYear() + yearsAhead);
-        const expireStr = exp.toISOString().replace("T", " ").substring(0, 19);
-        const expireDateOnly = exp.toISOString().substring(0, 10);
-        const daysRemaining = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return { expireStr, expireDateOnly, daysRemaining };
+        const expireDate = new Date(now.getTime());
+        expireDate.setFullYear(expireDate.getFullYear() + 10);
+        const expireDateOnly = expireDate.toISOString().substring(0, 10);
+        const expireStr = expireDate.toISOString().replace("T", " ").substring(0, 19);
+        const expireISO = expireDate.toISOString();
+        const expireTimestamp = Math.floor(expireDate.getTime() / 1000);
+        const daysRemaining = Math.floor((expireDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Shared expiry block (every alias we can think of)
+        const expiryBlock = {
+            expire_date: expireDateOnly,
+            expiry_date: expireDateOnly,
+            expiration_date: expireDateOnly,
+            expire_at: expireStr,
+            expired_at: expireStr,
+            expire_iso: expireISO,
+            expiry_iso: expireISO,
+            license_expiry: expireStr,
+            license_expire_date: expireStr,
+            license_expiration: expireStr,
+            expire_timestamp: expireTimestamp,
+            expire_ts: expireTimestamp,
+            expiry_timestamp: expireTimestamp,
+            expiration_timestamp: expireTimestamp,
+            expire_days: daysRemaining,
+            license_days: daysRemaining,
+            days_until_expiry: daysRemaining,
+            days_to_expire: daysRemaining,
+            subscription_days: daysRemaining,
+            validity_days: daysRemaining,
+            valid_days: daysRemaining,
+            expiry_days: daysRemaining,
+            period_remaining: daysRemaining,
+            days_remaining: daysRemaining,
+            days_left: daysRemaining,
+            remaining_days: daysRemaining,
+            days: daysRemaining
+        };
+
+        const nestedBlocks = {
+            subscription: {
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining,
+                expire_date: expireDateOnly,
+                expire_timestamp: expireTimestamp,
+                active: true,
+                status: "active",
+                valid: true
+            },
+            license: {
+                days_remaining: daysRemaining,
+                days_left: daysRemaining,
+                remaining_days: daysRemaining,
+                expire_date: expireDateOnly,
+                expire_timestamp: expireTimestamp,
+                valid: true,
+                status: "active",
+                active: true
+            }
+        };
+
+        return {
+            // Identity
+            user_id: userId,
+            id: userId,
+            username: username,
+            email: `${username}@smarttool.top`,
+            user_type: userType,
+
+            // Credits / balance
+            credits: credits,
+            balance: balance,
+            confirmed_balance: balance,
+            new_balance: balance,
+            credits_left: credits,
+            credits_used: 0,
+
+            // Expiry (all aliases)
+            ...expiryBlock,
+
+            // Nested blocks
+            ...nestedBlocks,
+
+            // Nested user object (for current_user.json)
+            user: {
+                id: userId,
+                user_id: userId,
+                username: username,
+                email: `${username}@smarttool.top`,
+                user_type: userType,
+                credits: credits,
+                balance: balance,
+                ...expiryBlock,
+                ...nestedBlocks
+            }
+        };
     }
 
     // ============================================
@@ -109,67 +205,25 @@ export default function handler(req, res) {
 
     // ============================================
     // POST /smarttool-api/?endpoint=login
-    // Returns BOTH flat fields AND nested user object.
     // ============================================
     if (isSmarttool && endpoint === "login" && req.method === "POST") {
         const now = new Date();
         const username = req.body?.username || "unknown";
         const sessionToken = `sess_${generateUUID().replace(/-/g, "")}`;
         const userId = "12345";
-        const email = `${username}@smarttool.top`;
         const fingerprint = generateUUID().replace(/-/g, "");
 
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        const payload = buildUserPayload(username, userId, "premium");
 
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(now.getTime() / 1000),
             server: "smarttool.top",
             data: {
-                // ---- Flat fields (direct access) ----
-                user_id: userId,
-                username: username,
-                email: email,
-                user_type: "premium",
+                ...payload,
                 session_token: sessionToken,
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
                 computer_fingerprint: fingerprint,
-                binding_allowed: true,
-
-                // ---- Nested user object (for current_user.json) ----
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    username: username,
-                    email: email,
-                    user_type: "premium",
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
+                binding_allowed: true
             }
         });
     }
@@ -183,52 +237,26 @@ export default function handler(req, res) {
             req.body?.user?.id ||
             req.body?.user?.user_id ||
             "12345";
+        const username =
+            req.body?.username ||
+            req.body?.user?.username ||
+            "ibrahim";
+        const fingerprint =
+            req.body?.computer_fingerprint ||
+            generateUUID().replace(/-/g, "");
 
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        const payload = buildUserPayload(username, userId, "premium");
 
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                user_id: userId,
+                ...payload,
                 binding_allowed: true,
                 can_login: true,
                 requires_binding: false,
-                fingerprint:
-                    req.body?.computer_fingerprint ||
-                    generateUUID().replace(/-/g, ""),
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
+                fingerprint: fingerprint
             }
         });
     }
@@ -240,51 +268,44 @@ export default function handler(req, res) {
             req.body?.user_id ||
             req.body?.user?.id ||
             "12345";
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        const username =
+            req.body?.username ||
+            req.body?.user?.username ||
+            "ibrahim";
+        const fingerprint =
+            req.body?.computer_fingerprint ||
+            generateUUID().replace(/-/g, "");
+
+        const payload = buildUserPayload(username, userId, "premium");
 
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(now.getTime() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                user_id: userId,
+                ...payload,
                 binding_created: true,
-                fingerprint:
-                    req.body?.computer_fingerprint ||
-                    generateUUID().replace(/-/g, ""),
-                bound_at: now.toISOString().replace("T", " ").substring(0, 19),
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining
+                fingerprint: fingerprint,
+                bound_at: now.toISOString().replace("T", " ").substring(0, 19)
             }
         });
     }
 
     // POST /smarttool-api/?endpoint=validate
     if (isSmarttool && endpoint === "validate" && req.method === "POST") {
+        const username = req.body?.username || "ibrahim";
+        const userId = req.body?.user_id || "12345";
+        const payload = buildUserPayload(username, userId, "premium");
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
+                ...payload,
                 valid: true,
                 license_valid: true,
-                message: "License valid",
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
+                message: "License valid"
             }
         });
     }
@@ -303,18 +324,18 @@ export default function handler(req, res) {
 
     // POST /smarttool-api/?endpoint=create-license
     if (isSmarttool && endpoint === "create-license" && req.method === "POST") {
+        const username = req.body?.username || "ibrahim";
+        const userId = req.body?.user_id || "12345";
+        const payload = buildUserPayload(username, userId, "premium");
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
+                ...payload,
                 license_created: true,
-                license_key: generateUUID().toUpperCase(),
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365
+                license_key: generateUUID().toUpperCase()
             }
         });
     }
@@ -329,51 +350,11 @@ export default function handler(req, res) {
     ) {
         const username = query.username || "ibrahimnet";
         const userId = "1337";
-        const email = `${username}@smarttool.top`;
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        const payload = buildUserPayload(username, userId, "user");
 
         return res.status(200).json({
             success: true,
-            data: {
-                user_id: userId,
-                username: username,
-                email: email,
-                user_type: "user",
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    username: username,
-                    email: email,
-                    user_type: "user",
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
-            }
+            data: payload
         });
     }
 
@@ -383,19 +364,15 @@ export default function handler(req, res) {
         (endpoint === "stats" || endpoint === "get_user_credits") &&
         req.method === "GET"
     ) {
+        const username = query.username || "ibrahim";
+        const userId = "12345";
+        const payload = buildUserPayload(username, userId, "premium");
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
-            data: {
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
-            }
+            data: payload
         });
     }
 
@@ -403,19 +380,15 @@ export default function handler(req, res) {
     // SMARTTOOL CATCH-ALL FALLBACK
     // ============================================
     if (isSmarttool) {
+        const username = query.username || "ibrahim";
+        const userId = "12345";
+        const payload = buildUserPayload(username, userId, "premium");
+
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
-            data: {
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
-            }
+            data: payload
         });
     }
 
