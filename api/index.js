@@ -1,20 +1,34 @@
 export default function handler(req, res) {
 
-    const path = req.url.split("?")[0];
+    const rawPath = req.url.split("?")[0];
     const query = req.query || {};
     const endpoint = query.endpoint || "";
 
+    // Normalize: treat /smarttool-api/index1.php as /smarttool-api/
+    let path = rawPath;
+    if (rawPath === "/smarttool-api/index1.php") {
+        path = "/smarttool-api/";
+    }
+
     console.log("METHOD:", req.method);
-    console.log("PATH:", path);
+    console.log("RAW PATH:", rawPath);
+    console.log("NORMALIZED PATH:", path);
     console.log("ENDPOINT:", endpoint);
     console.log("BODY:", req.body);
+
+    // Helper: is this a SMARTTOOL request? (either prefix)
+    const isSmarttool =
+        rawPath === "/smarttool-api/" ||
+        rawPath === "/smarttool-api/index1.php" ||
+        rawPath.startsWith("/smarttool-api/") ||
+        rawPath.startsWith("/smarttool-api/index1.php");
 
     // ============================================
     // SMARTTOOL API ROUTES
     // ============================================
 
     // GET /smarttool-api/?endpoint=status
-    if (path === "/smarttool-api/" && endpoint === "status" && req.method === "GET") {
+    if (isSmarttool && endpoint === "status" && req.method === "GET") {
         const now = new Date();
         return res.status(200).json({
             success: true,
@@ -27,23 +41,30 @@ export default function handler(req, res) {
                 database: "connected",
                 version: "2.1",
                 endpoints: [
-                    "/?endpoint=status",
-                    "/?endpoint=validate",
-                    "/?endpoint=login",
-                    "/?endpoint=system_update",
-                    "/?endpoint=check_binding",
-                    "/?endpoint=create_binding",
-                    "/?endpoint=log_activity",
-                    "/?endpoint=stats",
-                    "/?endpoint=get-licenses",
-                    "/?endpoint=create-license"
+                    "/smarttool-api/?endpoint=status",
+                    "/smarttool-api/?endpoint=validate",
+                    "/smarttool-api/?endpoint=login",
+                    "/smarttool-api/?endpoint=system_update",
+                    "/smarttool-api/?endpoint=check_binding",
+                    "/smarttool-api/?endpoint=create_binding",
+                    "/smarttool-api/?endpoint=log_activity",
+                    "/smarttool-api/?endpoint=stats",
+                    "/smarttool-api/?endpoint=get-licenses",
+                    "/smarttool-api/?endpoint=create-license",
+                    "/smarttool-api/?endpoint=get_user_info",
+                    "/smarttool-api/?endpoint=get_user_profile",
+                    "/smarttool-api/?endpoint=get_user_credits",
+                    "/smarttool-api/index1.php?endpoint=get_user_info",
+                    "/smarttool-api/index1.php?endpoint=status",
+                    "/smarttool-api/index1.php?endpoint=login",
+                    "/smarttool-api/index1.php?endpoint=system_update"
                 ]
             }
         });
     }
 
     // POST /smarttool-api/?endpoint=system_update
-    if (path === "/smarttool-api/" && endpoint === "system_update" && req.method === "POST") {
+    if (isSmarttool && endpoint === "system_update" && req.method === "POST") {
         const now = new Date();
         const clientVersion = req.body?.client_version || "26.5.0";
         const latestVersion = "26.5.0";
@@ -74,7 +95,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=login
-    if (path === "/smarttool-api/" && endpoint === "login" && req.method === "POST") {
+    if (isSmarttool && endpoint === "login" && req.method === "POST") {
         const now = new Date();
         const username = req.body?.username || "unknown";
         const fingerprint = generateUUID().replace(/-/g, "");
@@ -100,7 +121,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=check_binding
-    if (path === "/smarttool-api/" && endpoint === "check_binding" && req.method === "POST") {
+    if (isSmarttool && endpoint === "check_binding" && req.method === "POST") {
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -115,7 +136,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=create_binding
-    if (path === "/smarttool-api/" && endpoint === "create_binding" && req.method === "POST") {
+    if (isSmarttool && endpoint === "create_binding" && req.method === "POST") {
         const now = new Date();
         return res.status(200).json({
             success: true,
@@ -130,7 +151,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=validate
-    if (path === "/smarttool-api/" && endpoint === "validate" && req.method === "POST") {
+    if (isSmarttool && endpoint === "validate" && req.method === "POST") {
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -144,7 +165,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=log_activity
-    if (path === "/smarttool-api/" && endpoint === "log_activity" && req.method === "POST") {
+    if (isSmarttool && endpoint === "log_activity" && req.method === "POST") {
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -156,7 +177,7 @@ export default function handler(req, res) {
     }
 
     // POST /smarttool-api/?endpoint=create-license
-    if (path === "/smarttool-api/" && endpoint === "create-license" && req.method === "POST") {
+    if (isSmarttool && endpoint === "create-license" && req.method === "POST") {
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
@@ -169,33 +190,34 @@ export default function handler(req, res) {
         });
     }
 
-    // GET /smarttool-api/?endpoint=get_user_info | get_user_profile | get-licenses
+    // ============================================
+    // GET /smarttool-api/index1.php?endpoint=get_user_info&username=
+    // (and also /smarttool-api/?endpoint=get_user_info | get_user_profile | get-licenses)
+    // ============================================
     if (
-        path === "/smarttool-api/" &&
+        isSmarttool &&
         (endpoint === "get_user_info" || endpoint === "get_user_profile" || endpoint === "get-licenses") &&
         req.method === "GET"
     ) {
         const username = query.username || "ibrahimnet";
         return res.status(200).json({
             success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
             data: {
-                user_id: "12345",
-                username,
+                user_id: "1337",
+                username: username,
                 email: `${username}@smarttool.top`,
-                user_type: "premium",
-                credits: 999,
-                balance: 999,
-                expire_date: "2027-12-31",
-                days_remaining: 365
+                user_type: "user",
+                credits: 185,
+                balance: 185,
+                expire_date: "2030-12-31",
+                days_remaining: 999
             }
         });
     }
 
     // GET /smarttool-api/?endpoint=stats | get_user_credits
     if (
-        path === "/smarttool-api/" &&
+        isSmarttool &&
         (endpoint === "stats" || endpoint === "get_user_credits") &&
         req.method === "GET"
     ) {
@@ -204,8 +226,8 @@ export default function handler(req, res) {
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                credits: 999,
-                balance: 999
+                credits: 185,
+                balance: 185
             }
         });
     }
@@ -213,14 +235,14 @@ export default function handler(req, res) {
     // ============================================
     // SMARTTOOL CATCH-ALL FALLBACK (must be AFTER all specific smarttool endpoints)
     // ============================================
-    if (path.startsWith("/smarttool-api")) {
+    if (isSmarttool) {
         return res.status(200).json({
             success: true,
             timestamp: Math.floor(Date.now() / 1000),
             server: "knox-sigma.vercel.app",
             data: {
-                credits: 999,
-                balance: 999
+                credits: 185,
+                balance: 185
             }
         });
     }
