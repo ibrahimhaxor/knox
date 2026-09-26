@@ -1,427 +1,301 @@
-export default function handler(req, res) {
+// ============================================
+// LOGIN & AUTHENTICATION SYSTEM
+// Vercel Serverless Handler
+// ============================================
 
-    const rawPath = req.url.split("?")[0];
-    const query = req.query || {};
-    const endpoint = query.endpoint || "";
-
-    // Normalize: treat /smarttool-api/index1.php as /smarttool-api/
-    let path = rawPath;
-    if (rawPath === "/smarttool-api/index1.php") {
-        path = "/smarttool-api/";
+// In-memory store (resets on cold start — replace with Upstash/DB in prod)
+const USERS = {
+    // demo / demo1234  →  credits: 100
+    demo: {
+        id: "user_demo_001",
+        username: "demo",
+        password: "demo1234",
+        email: "demo@oumse.local",
+        subscription: "pro",
+        subscription_expires: "2099-01-01T00:00:00.000Z",
+        credits: 100,
+        is_admin: false
     }
+};
+
+const SESSIONS = {};        // token -> { user_id, expires_at }
+const HWIDS = {};           // user_id -> { hwid: device_id }
+const TRANSACTIONS = [];    // audit log
+
+const OPERATIONS = [
+    { id: "spd_patch",           device: "mtk",      cost_credits: 5, label: "SPD Patch (MTK)" },
+    { id: "frp_unlock",          device: "qualcomm", cost_credits: 3, label: "FRP Unlock" },
+    { id: "bootloader_unlock",   device: "mtk",      cost_credits: 8, label: "Bootloader Unlock" },
+    { id: "meta_fix_blackscreen",device: "mtk",      cost_credits: 2, label: "Meta Fix Blackscreen" }
+];
+
+const SESSION_TTL_SECONDS = 18000;  // 5 hours
+
+// ============================================
+// MAIN HANDLER
+// ============================================
+export default async function handler(req, res) {
+
+    const path = req.url.split("?")[0];
+    const body = await readBody(req);
 
     console.log("METHOD:", req.method);
-    console.log("RAW PATH:", rawPath);
-    console.log("NORMALIZED PATH:", path);
-    console.log("ENDPOINT:", endpoint);
-    console.log("BODY:", req.body);
+    console.log("PATH:",   path);
+    console.log("BODY:",   body);
 
-    // Helper: is this a SMARTTOOL request? (either prefix)
-    const isSmarttool =
-        rawPath === "/smarttool-api/" ||
-        rawPath === "/smarttool-api/index1.php" ||
-        rawPath.startsWith("/smarttool-api/") ||
-        rawPath.startsWith("/smarttool-api/index1.php");
+    // Allow the custom client UA only
+    const ua = (req.headers["user-agent"] || "");
+    const fromClient = ua.includes("OumseGsmToolPro/");
 
-    // ============================================
-    // SHARED HELPERS (expiry computation)
-    // ============================================
-    function computeExpiry(yearsAhead) {
+    // --------------------------------------------------------------
+    // POST /api/login
+    // --------------------------------------------------------------
+    if (path === "/api/login" && req.method === "POST") {
+        const { username, password, remember_me, hwid } = body || {};
+
+        if (!username || !password) {
+            return res.status(400).json({ error: "Missing credentials" });
+        }
+
+        const user = USERS[username.toLowerCase()];
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        if (user.subscription_expires &&
+            new Date(user.subscription_expires).getTime() < Date.now()) {
+            return res.status(403).json({
+                error: "Subscription expired. Re-login required after renewal."
+            });
+        }
+
+        const access_token  = makeToken(user.id, "access");
+        const refresh_token = makeToken(user.id, "refresh");
         const now = new Date();
-        const exp = new Date(now.getTime());
-        exp.setFullYear(exp.getFullYear() + yearsAhead);
-        const expireStr = exp.toISOString().replace("T", " ").substring(0, 19);
-        const expireDateOnly = exp.toISOString().substring(0, 10);
-        const daysRemaining = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return { expireStr, expireDateOnly, daysRemaining };
-    }
 
-    // ============================================
-    // SMARTTOOL API ROUTES
-    // ============================================
+        SESSIONS[access_token] = {
+            user_id: user.id,
+            expires_at: new Date(now.getTime() + SESSION_TTL_SECONDS * 1000).toISOString()
+        };
 
-    // GET /smarttool-api/?endpoint=status
-    if (isSmarttool && endpoint === "status" && req.method === "GET") {
-        const now = new Date();
+        // Auto-register HWID on login if sent
+        if (hwid) {
+            registerHwid(user.id, hwid, "AUTO");
+        }
+
         return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(now.getTime() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                status: "online",
-                server_time: now.toISOString().replace("T", " ").substring(0, 19),
-                server: "knox-sigma.vercel.app",
-                database: "connected",
-                version: "2.1",
-                endpoints: [
-                    "/smarttool-api/?endpoint=status",
-                    "/smarttool-api/?endpoint=validate",
-                    "/smarttool-api/?endpoint=login",
-                    "/smarttool-api/?endpoint=system_update",
-                    "/smarttool-api/?endpoint=check_binding",
-                    "/smarttool-api/?endpoint=create_binding",
-                    "/smarttool-api/?endpoint=log_activity",
-                    "/smarttool-api/?endpoint=stats",
-                    "/smarttool-api/?endpoint=get-licenses",
-                    "/smarttool-api/?endpoint=create-license",
-                    "/smarttool-api/?endpoint=get_user_info",
-                    "/smarttool-api/?endpoint=get_user_profile",
-                    "/smarttool-api/?endpoint=get_user_credits",
-                    "/smarttool-api/index1.php?endpoint=get_user_info",
-                    "/smarttool-api/index1.php?endpoint=status",
-                    "/smarttool-api/index1.php?endpoint=login",
-                    "/smarttool-api/index1.php?endpoint=system_update"
-                ]
+            access_token,
+            refresh_token,
+            token_type: "Bearer",
+            expires_in: SESSION_TTL_SECONDS,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                subscription: user.subscription,
+                subscription_expires: user.subscription_expires,
+                credits: user.credits,
+                is_admin: user.is_admin
             }
         });
     }
 
-    // POST /smarttool-api/?endpoint=system_update
-    if (isSmarttool && endpoint === "system_update" && req.method === "POST") {
-        const now = new Date();
-        const clientVersion = req.body?.client_version || "26.5.0";
-        const latestVersion = "26.5.0";
-        const minVersion = "26.5.0";
-        const updateRequired = clientVersion < minVersion;
+    // --------------------------------------------------------------
+    // GET /api/me
+    // --------------------------------------------------------------
+    if (path === "/api/me" && req.method === "GET") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
+
+        const user = getUserById(auth.user_id);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
         return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(now.getTime() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                update_required: updateRequired,
-                blocking_update: false,
-                min_version_required: minVersion,
-                latest_version: latestVersion,
-                update_urgency: "critical",
-                maintenance_mode: false,
-                message: "🔥Smarttool v26.5.0🔥\r\n\r\nDIAG MODE ADDED READ AND WRITE and UNLOCK BL VIA DIAG\r\n GOOD DAY\r\n\r\n",
-                update_url: "https://knox-sigma.vercel.app/update.php",
-                block_old_versions: true,
-                client_version: clientVersion,
-                server_checked: true,
-                explanation: updateRequired
-                    ? `Your version (v${clientVersion}) is below the minimum requirement (v${minVersion}).`
-                    : `Your version (v${clientVersion}) meets the minimum requirement (v${minVersion}).`
-            }
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            subscription: user.subscription,
+            subscription_expires: user.subscription_expires,
+            credits: user.credits,
+            is_admin: user.is_admin
         });
     }
 
-    // ============================================
-    // POST /smarttool-api/?endpoint=login
-    // Returns BOTH flat fields AND nested user object.
-    // ============================================
-    if (isSmarttool && endpoint === "login" && req.method === "POST") {
-        const now = new Date();
-        const username = req.body?.username || "unknown";
-        const sessionToken = `sess_${generateUUID().replace(/-/g, "")}`;
-        const userId = "12345";
-        const email = `${username}@smarttool.top`;
-        const fingerprint = generateUUID().replace(/-/g, "");
+    // --------------------------------------------------------------
+    // POST /api/heartbeat
+    // --------------------------------------------------------------
+    if (path === "/api/heartbeat" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
 
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        // Refresh expiry (5h window)
+        const newExpiry = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
+        SESSIONS[auth.token].expires_at = newExpiry;
+
+        // 426 → force update
+        const clientVersion = req.headers["x-client-version"];
+        const minVersion    = "1.1.8";
+        if (clientVersion && compareVersions(clientVersion, minVersion) < 0) {
+            return res.status(426).json({
+                error: "Mise a jour requise (heartbeat 426)",
+                min_version: minVersion
+            });
+        }
 
         return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(now.getTime() / 1000),
-            server: "smarttool.top",
-            data: {
-                // ---- Flat fields (direct access) ----
-                user_id: userId,
-                username: username,
-                email: email,
-                user_type: "premium",
-                session_token: sessionToken,
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
-                computer_fingerprint: fingerprint,
-                binding_allowed: true,
-
-                // ---- Nested user object (for current_user.json) ----
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    username: username,
-                    email: email,
-                    user_type: "premium",
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
-            }
+            status: "ok",
+            session_expires: newExpiry
         });
     }
 
-    // ============================================
-    // POST /smarttool-api/?endpoint=check_binding
-    // ============================================
-    if (isSmarttool && endpoint === "check_binding" && req.method === "POST") {
-        const userId =
-            req.body?.user_id ||
-            req.body?.user?.id ||
-            req.body?.user?.user_id ||
-            "12345";
+    // --------------------------------------------------------------
+    // GET /api/operations
+    // --------------------------------------------------------------
+    if (path === "/api/operations" && req.method === "GET") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
 
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+        return res.status(200).json({ operations: OPERATIONS });
+    }
+
+    // --------------------------------------------------------------
+    // POST /api/check_op
+    // --------------------------------------------------------------
+    if (path === "/api/check_op" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
+
+        const { operation, device } = body || {};
+        const op = OPERATIONS.find(o => o.id === operation);
+        if (!op) {
+            return res.status(400).json({ allowed: false, error: "Unknown operation" });
+        }
+
+        const user = getUserById(auth.user_id);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
         return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                user_id: userId,
-                binding_allowed: true,
-                can_login: true,
-                requires_binding: false,
-                fingerprint:
-                    req.body?.computer_fingerprint ||
-                    generateUUID().replace(/-/g, ""),
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
-            }
+            allowed: user.credits >= op.cost_credits,
+            cost_credits: op.cost_credits,
+            subscription_covers: false,
+            remaining: user.credits,
+            operation,
+            device: device || op.device
         });
     }
 
-    // POST /smarttool-api/?endpoint=create_binding
-    if (isSmarttool && endpoint === "create_binding" && req.method === "POST") {
-        const now = new Date();
-        const userId =
-            req.body?.user_id ||
-            req.body?.user?.id ||
-            "12345";
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+    // --------------------------------------------------------------
+    // POST /api/consume_op
+    // --------------------------------------------------------------
+    if (path === "/api/consume_op" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
+
+        const { operation, device, confirm } = body || {};
+        if (!confirm) {
+            return res.status(400).json({ error: "Not confirmed" });
+        }
+
+        const op = OPERATIONS.find(o => o.id === operation);
+        if (!op) return res.status(400).json({ error: "Unknown operation" });
+
+        const user = getUserById(auth.user_id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        if (user.credits < op.cost_credits) {
+            return res.status(402).json({
+                error: `Credits insuffisants. Tu as ${user.credits}, il faut ${op.cost_credits}.`
+            });
+        }
+
+        user.credits -= op.cost_credits;
+        const transaction_id = "txn_" + generateUUID();
+
+        TRANSACTIONS.push({
+            transaction_id,
+            user_id: user.id,
+            operation,
+            device: device || op.device,
+            cost: op.cost_credits,
+            remaining: user.credits,
+            at: new Date().toISOString()
+        });
 
         return res.status(200).json({
             success: true,
-            timestamp: Math.floor(now.getTime() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                user_id: userId,
-                binding_created: true,
-                fingerprint:
-                    req.body?.computer_fingerprint ||
-                    generateUUID().replace(/-/g, ""),
-                bound_at: now.toISOString().replace("T", " ").substring(0, 19),
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                license_expiry: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining
-            }
+            remaining_credits: user.credits,
+            transaction_id
         });
     }
 
-    // POST /smarttool-api/?endpoint=validate
-    if (isSmarttool && endpoint === "validate" && req.method === "POST") {
+    // --------------------------------------------------------------
+    // POST /api/flag_hwid
+    // --------------------------------------------------------------
+    if (path === "/api/flag_hwid" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
+
+        const { hwid, device_name } = body || {};
+        if (!hwid) return res.status(400).json({ error: "Missing hwid" });
+
+        const device_id = registerHwid(auth.user_id, hwid, device_name || "UNKNOWN");
+        return res.status(200).json({ registered: true, device_id });
+    }
+
+    // --------------------------------------------------------------
+    // POST /api/logout
+    // --------------------------------------------------------------
+    if (path === "/api/logout" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return res.status(200).json({ ok: true }); // idempotent
+
+        delete SESSIONS[auth.token];
+        return res.status(200).json({ ok: true });
+    }
+
+    // --------------------------------------------------------------
+    // POST /api/run_spd
+    // --------------------------------------------------------------
+    if (path === "/api/run_spd" && req.method === "POST") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
+
+        const { prodnv } = body || {};
+        if (!prodnv) return res.status(400).json({ error: "Missing prodnv" });
+
+        // TODO: real SPD patcher
+        const fakeHash = Buffer.from(String(prodnv)).toString("base64").slice(0, 16);
         return res.status(200).json({
             success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                valid: true,
-                license_valid: true,
-                message: "License valid",
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
-            }
+            patched: true,
+            hash: fakeHash
         });
     }
 
-    // POST /smarttool-api/?endpoint=log_activity
-    if (isSmarttool && endpoint === "log_activity" && req.method === "POST") {
-        return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                logged: true
-            }
-        });
-    }
-
-    // POST /smarttool-api/?endpoint=create-license
-    if (isSmarttool && endpoint === "create-license" && req.method === "POST") {
-        return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                license_created: true,
-                license_key: generateUUID().toUpperCase(),
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365
-            }
-        });
-    }
-
-    // ============================================
-    // GET /smarttool-api/index1.php?endpoint=get_user_info&username=
-    // ============================================
-    if (
-        isSmarttool &&
-        (endpoint === "get_user_info" || endpoint === "get_user_profile" || endpoint === "get-licenses") &&
-        req.method === "GET"
-    ) {
-        const username = query.username || "ibrahimnet";
-        const userId = "1337";
-        const email = `${username}@smarttool.top`;
-        const credits = 280;
-        const balance = 280;
-        const expireDateOnly = "2027-12-31";
-        const expireStr = "2027-12-31 00:00:00";
-        const daysRemaining = 365;
+    // --------------------------------------------------------------
+    // GET /api/get_algo
+    // --------------------------------------------------------------
+    if (path === "/api/get_algo" && req.method === "GET") {
+        const auth = requireAuth(req, res, SESSIONS);
+        if (!auth) return;
 
         return res.status(200).json({
-            success: true,
-            data: {
-                user_id: userId,
-                username: username,
-                email: email,
-                user_type: "user",
-                credits: credits,
-                balance: balance,
-                expire_date: expireDateOnly,
-                expiry_date: expireDateOnly,
-                expiration_date: expireDateOnly,
-                license_expiry: expireStr,
-                license_expire_date: expireStr,
-                days_remaining: daysRemaining,
-                days_left: daysRemaining,
-                remaining_days: daysRemaining,
-                days: daysRemaining,
-
-                user: {
-                    id: userId,
-                    user_id: userId,
-                    username: username,
-                    email: email,
-                    user_type: "user",
-                    credits: credits,
-                    balance: balance,
-                    expire_date: expireDateOnly,
-                    expiry_date: expireDateOnly,
-                    expiration_date: expireDateOnly,
-                    license_expiry: expireStr,
-                    license_expire_date: expireStr,
-                    days_remaining: daysRemaining,
-                    days_left: daysRemaining,
-                    remaining_days: daysRemaining,
-                    days: daysRemaining
-                }
-            }
+            algorithm: "aes-256-gcm",
+            iv: "000000000000000000000000",
+            version: 1
         });
     }
 
-    // GET /smarttool-api/?endpoint=stats | get_user_credits
-    if (
-        isSmarttool &&
-        (endpoint === "stats" || endpoint === "get_user_credits") &&
-        req.method === "GET"
-    ) {
-        return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
-            }
-        });
+    // --------------------------------------------------------------
+    // /api/dwmapi (unknown)
+    // --------------------------------------------------------------
+    if (path === "/api/dwmapi") {
+        return res.status(501).json({ error: "Not implemented" });
     }
 
-    // ============================================
-    // SMARTTOOL CATCH-ALL FALLBACK
-    // ============================================
-    if (isSmarttool) {
-        return res.status(200).json({
-            success: true,
-            timestamp: Math.floor(Date.now() / 1000),
-            server: "knox-sigma.vercel.app",
-            data: {
-                credits: 280,
-                balance: 280,
-                expire_date: "2027-12-31",
-                license_expiry: "2027-12-31 00:00:00",
-                days_remaining: 365,
-                days_left: 365,
-                remaining_days: 365
-            }
-        });
-    }
-
-    // ============================================
-    // /360/version
-    // ============================================
+    // --------------------------------------------------------------
+    // LEGACY 360 TOOL ROUTES (kept from your original index.js)
+    // --------------------------------------------------------------
     if (path === "/360/version" && req.method === "GET") {
         return res.status(200).json({
             version: "1.1.8",
@@ -429,22 +303,18 @@ export default function handler(req, res) {
         });
     }
 
-    // ============================================
-    // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
-    // ============================================
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-
-        const operation = req.body?.operation || 'spd';
-        const request_id = req.body?.request_id || generateUUID();
-        const cost = req.body?.cost || 2;
-        const now = new Date();
+        const operation  = body?.operation  || "spd";
+        const request_id = body?.request_id || generateUUID();
+        const cost       = body?.cost       || 2;
+        const now        = new Date();
 
         const response = {
             success: true,
             message: "OK",
-            operation: operation,
-            request_id: request_id,
-            cost: cost,
+            operation,
+            request_id,
+            cost,
             credits_used: cost,
             credits_left: 248,
             balance: 248,
@@ -462,26 +332,19 @@ export default function handler(req, res) {
 
         if (operation === "spd") {
             response.message = "SPD operation successful";
-            response.operation = "spd";
         } else if (operation === "mtk") {
             response.message = "MTK operation successful";
-            response.operation = "mtk";
         } else if (operation === "meta_fix_blackscreen") {
             response.message = "Meta fix blackscreen operation successful";
-            response.operation = "meta_fix_blackscreen";
             response.meta_status = "fixed";
             response.blackscreen_fix = "applied";
         } else {
             response.message = "Operation successful";
-            response.operation = operation;
         }
 
         return res.status(200).json(response);
     }
 
-    // ============================================
-    // /360/login12
-    // ============================================
     if (path === "/360/login12" && req.method === "POST") {
         const now = new Date();
         const time = now.toISOString().replace("T", " ").substring(0, 19);
@@ -500,53 +363,16 @@ export default function handler(req, res) {
         });
     }
 
-    // ============================================
-    // /360/login13 (alias to login12)
-    // ============================================
-    if (path === "/360/login13" && req.method === "POST") {
-        const now = new Date();
-        const time = now.toISOString().replace("T", " ").substring(0, 19);
-
-        return res.status(200).json({
-            success: true,
-            message: "Login successful!",
-            server_time_utc: now.toISOString(),
-            server_time: time,
-            server_time_offset: 0,
-            auth_check_interval: 3600,
-            lock_expiry: "2099-01-01 00:00:00",
-            login_time: time,
-            license_expiry: "2099-01-01 00:00:00",
-            credits: 250
-        });
-    }
-
-    // ============================================
-    // LEGACY / GENERIC FALLBACKS
-    // ============================================
-
+    // ---- YOUR EXISTING FALLBACKS ----
     let action = "";
-
-    try {
-        if (req.body && req.body.action) {
-            action = req.body.action;
-        }
-    } catch (e) {}
+    try { action = body?.action || ""; } catch (e) {}
 
     if (action === "get_patch_algorithms" || req.url.includes("algorithms")) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            algorithms: []
-        });
+        return res.status(200).json({ status: "SUCCESS", algorithms: [] });
     }
-
     if (action === "get_secure_logic" || req.url.includes("secure")) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            data: "License valid"
-        });
+        return res.status(200).json({ status: "SUCCESS", data: "License valid" });
     }
-
     if (req.url.includes("check_update")) {
         return res.status(200).send("0.7.93");
     }
@@ -556,12 +382,76 @@ export default function handler(req, res) {
 }
 
 // ============================================
-// HELPER FUNCTION
+// HELPERS
 // ============================================
+
 function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        const v = c === "x" ? r : (r & 0x3 | 0x8);
         return v.toString(16);
+    });
+}
+
+function makeToken(user_id, kind) {
+    return `${kind}_${user_id}_${generateUUID()}`;
+}
+
+function getUserById(id) {
+    return Object.values(USERS).find(u => u.id === id) || null;
+}
+
+function registerHwid(user_id, hwid, device_name) {
+    if (!HWIDS[user_id]) HWIDS[user_id] = {};
+    if (!HWIDS[user_id][hwid]) {
+        HWIDS[user_id][hwid] = "dev_" + generateUUID();
+    }
+    return HWIDS[user_id][hwid];
+}
+
+function requireAuth(req, res, SESSIONS) {
+    const header = req.headers["authorization"] || "";
+    const m = header.match(/^Bearer\s+(.+)$/i);
+    if (!m) {
+        res.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    const token = m[1];
+    const session = SESSIONS[token];
+    if (!session) {
+        res.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    if (new Date(session.expires_at).getTime() < Date.now()) {
+        delete SESSIONS[token];
+        res.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    return { ...session, token };
+}
+
+function compareVersions(a, b) {
+    const pa = String(a).split(".").map(Number);
+    const pb = String(b).split(".").map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] || 0) - (pb[i] || 0);
+        if (d !== 0) return d;
+    }
+    return 0;
+}
+
+// Safe body reader — works whether Vercel parsed it or not
+async function readBody(req) {
+    if (req.body && typeof req.body === "object") return req.body;
+    if (typeof req.body === "string") {
+        try { return JSON.parse(req.body); } catch { return {}; }
+    }
+    return await new Promise((resolve) => {
+        let data = "";
+        req.on("data", c => (data += c));
+        req.on("end", () => {
+            try { resolve(JSON.parse(data)); } catch { resolve({}); }
+        });
+        req.on("error", () => resolve({}));
     });
 }
