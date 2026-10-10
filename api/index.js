@@ -7,7 +7,7 @@ export default function handler(req, res) {
     console.log("BODY:", req.body);
 
     // GET /360/version
-    if (path === "/360/version" && req.method === "GET") {
+    if (path === "/360/versions" && req.method === "GET") {
         return res.status(200).json({
             version: "1.1.8",
             url: "https://www.mediafire.com/file/rqr0wr8uc4zq0op/360-tool-v1.2.1_fixed.zip/file"
