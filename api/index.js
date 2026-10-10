@@ -20,13 +20,11 @@ export default function handler(req, res) {
     // ============================================
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
 
-        // Get operation from request body
         const operation = req.body?.operation || 'spd';
         const request_id = req.body?.request_id || generateUUID();
         const cost = req.body?.cost || 2;
         const now = new Date();
 
-        // Base response
         const response = {
             success: true,
             message: "OK",
@@ -48,9 +46,6 @@ export default function handler(req, res) {
             login_time: now.toISOString().replace("T", " ").substring(0, 19)
         };
 
-        // ============================================
-        // OPERATION ROUTING: SPD, MTK, META
-        // ============================================
         if (operation === "spd") {
             response.message = "SPD operation successful";
             response.operation = "spd";
@@ -66,7 +61,6 @@ export default function handler(req, res) {
             response.blackscreen_fix = "applied";
 
         } else {
-            // Default fallback for any other operation
             response.message = "Operation successful";
             response.operation = operation;
         }
@@ -78,21 +72,29 @@ export default function handler(req, res) {
     if (path === "/login1" && req.method === "POST") {
 
         const now = new Date();
-        const time = now.toISOString()
-            .replace("T", " ")
-            .substring(0, 19);
+        const isoUtc = now.toISOString();                              // 2026-10-10T12:00:00.000Z
+        const time = isoUtc.replace("T", " ").substring(0, 19);        // 2026-10-10 12:00:00
 
         return res.status(200).json({
             success: true,
-            message: "Login successful!",
-            server_time_utc: now.toISOString(),
+            message: "✓ Login successful!",
+            username: "ctf",
+            server_time_utc: isoUtc,           // proper UTC ISO
             server_time: time,
-            server_time_offset: 0,
-            auth_check_interval: 3600,
-            lock_expiry: "2099-01-01 00:00:00",
+            echo_nonce: "x",
             login_time: time,
+            login_time_str: time,
+            lock_expiry: "2099-01-01 00:00:00",
+            lock_expiry_str: "2099-01-01 00:00:00",
+            auth_check_interval: 999999,
             license_expiry: "2099-01-01 00:00:00",
-            credits: 250
+            expiry_time: "2099-01-01 00:00:00",
+            credits: 9999,
+            user_credits: 9999,
+            server_machine_id: "ANY",
+            server_synced_now: time,
+            server_time_offset: 0,
+            response_signature: "MZs8CI7yWa+KjagsoN/Wvf8ZyzlgYMazmCfY8cbq6aIHPDkgr/rAyrWeKCdREUQlLs3gShRyMMFYOMLcYbwjcGr+hVIKBt2CqrlN4vxHJaM6/PpjDB4k0sVph7j1Ls7QK2ZsyQ6MP8DsCjh3Mczctrp62xm4FtkmCfLwagCtbFoGhwz6r1s2fBkP6p9r9cY09hM8W8JBfcPoZedq28k9es2F8IZps560h2Tw9jI5M67hx+uJKYnsyHVUqCNNbZtxXMHgmPo5ZlG5h2mMskpytURGU6F75u2pkhdM495brg/d/eWJm4wIX5A6/5wANCkdP2xDe8RkiXTDlSpnBSSK9g=="
         });
     }
 
