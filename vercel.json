@@ -8,7 +8,7 @@
   ],
   "routes": [
     {
-      "src": "/360/version",
+      "src": "/360/versions",
       "dest": "/api/index.js"
     },
     {
