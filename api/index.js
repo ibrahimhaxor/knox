@@ -74,7 +74,7 @@ export default function handler(req, res) {
     }
 
     // POST /360/login12
-    if (path === "/360/login12" && req.method === "POST") {
+    if (path === "/login1" && req.method === "POST") {
 
         const now = new Date();
         const time = now.toISOString()
