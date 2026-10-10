@@ -12,7 +12,7 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/360/login12",
+      "src": "/login1",
       "dest": "/api/index.js"
     },
     {
