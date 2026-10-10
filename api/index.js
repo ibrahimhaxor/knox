@@ -9,10 +9,10 @@ export default function handler(req, res) {
     // GET /360/version
     if (path === "/360/versions" && req.method === "GET") {
         return res.status(200).json({
-            version: "2.1.4",
-            url: "https://www.mediafire.com/file/rqr0wr8uc4zq0op/360-tool-v1.2.1_fixed.zip/file"
-        });
-    }
+            version": "2.1.4",
+  "url": "https://www.mediafire.com/file/31eh6p920josgel/360_TOOL_PRO_V1.2_bootloder_fixed.zip/file",
+  "response_signature": "MZs8CI7yWa+KjagsoN/Wvf8ZyzlgYMazmCfY8cbq6aIHPDkgr/rAyrWeKCdREUQlLs3gShRyMMFYOMLcYbwjcGr+hVIKBt2CqrlN4vxHJaM6/PpjDB4k0sVph7j1Ls7QK2ZsyQ6MP8DsCjh3Mczctrp62xm4FtkmCfLwagCtbFoGhwz6r1s2fBkP6p9r9cY09hM8W8JBfcPoZedq28k9es2F8IZps560h2Tw9jI5M67hx+uJKYnsyHVUqCNNbZtxXMHgmPo5ZlG5h2mMskpytURGU6F75u2pkhdM495brg/d/eWJm4wIX5A6/5wANCkdP2xDe8RkiXTDlSpnBSSK9g=="
+}
 
     // ============================================
     // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
