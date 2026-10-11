@@ -19,13 +19,11 @@ export default function handler(req, res) {
     // ============================================
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
         
-        // Get operation from request body
         const operation = req.body?.operation || 'spd';
         const request_id = req.body?.request_id || generateUUID();
         const cost = req.body?.cost || 2;
         const now = new Date();
 
-        // Base response
         const response = {
             success: true,
             message: "OK",
@@ -47,9 +45,6 @@ export default function handler(req, res) {
             login_time: now.toISOString().replace("T", " ").substring(0, 19)
         };
 
-        // ============================================
-        // OPERATION ROUTING: SPD, MTK, META
-        // ============================================
         if (operation === "spd") {
             response.message = "SPD operation successful";
             response.operation = "spd";
@@ -65,7 +60,6 @@ export default function handler(req, res) {
             response.blackscreen_fix = "applied";
             
         } else {
-            // Default fallback for any other operation
             response.message = "Operation successful";
             response.operation = operation;
         }
@@ -73,8 +67,20 @@ export default function handler(req, res) {
         return res.status(200).json(response);
     }
 
-    // POST /360/login12
+    // ============================================
+    // POST /360/login12 — WITH CREDENTIAL CHECK
+    // ============================================
     if (path === "/360/login12" && req.method === "POST") {
+
+        const { username, password } = req.body || {};
+
+        // Validate credentials
+        if (username !== "ibrahimnet" || password !== "ibrahim@360") {
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect username or password"
+            });
+        }
 
         const now = new Date();
         const time = now.toISOString()
@@ -95,7 +101,7 @@ export default function handler(req, res) {
         });
     }
 
-    // ---- YOUR EXISTING CODE BELOW ----
+    // ---- EXISTING CODE BELOW ----
 
     let action = "";
 
