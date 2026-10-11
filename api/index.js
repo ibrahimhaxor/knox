@@ -1,10 +1,19 @@
 export default function handler(req, res) {
 
+    // CORS + preflight
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+        return res.status(200).end();
+    }
+
     const path = req.url.split("?")[0];
 
     console.log("METHOD:", req.method);
     console.log("PATH:", path);
     console.log("BODY:", req.body);
+    console.log("CONTENT-TYPE:", req.headers["content-type"]);
 
     // GET /360/version
     if (path === "/360/version" && req.method === "GET") {
@@ -14,11 +23,8 @@ export default function handler(req, res) {
         });
     }
 
-    // ============================================
-    // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
-    // ============================================
+    // /360/credit1234567
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-        
         const operation = req.body?.operation || 'spd';
         const request_id = req.body?.request_id || generateUUID();
         const cost = req.body?.cost || 2;
@@ -47,21 +53,14 @@ export default function handler(req, res) {
 
         if (operation === "spd") {
             response.message = "SPD operation successful";
-            response.operation = "spd";
-            
         } else if (operation === "mtk") {
             response.message = "MTK operation successful";
-            response.operation = "mtk";
-            
         } else if (operation === "meta_fix_blackscreen") {
             response.message = "Meta fix blackscreen operation successful";
-            response.operation = "meta_fix_blackscreen";
             response.meta_status = "fixed";
             response.blackscreen_fix = "applied";
-            
         } else {
             response.message = "Operation successful";
-            response.operation = operation;
         }
 
         return res.status(200).json(response);
@@ -72,20 +71,29 @@ export default function handler(req, res) {
     // ============================================
     if (path === "/360/login12" && req.method === "POST") {
 
-        const { username, password } = req.body || {};
+        // Accept JSON body, form-encoded body, or query params
+        let body = req.body;
+        if (typeof body === "string") {
+            try { body = Object.fromEntries(new URLSearchParams(body)); } catch (e) {}
+        }
+        body = body || {};
 
-        // Validate credentials
+        const urlObj = new URL(req.url, "http://localhost");
+        const username = body.username || urlObj.searchParams.get("username");
+        const password = body.password || urlObj.searchParams.get("password");
+
+        console.log("LOGIN ATTEMPT:", { username, password });
+
+        // Return 200 even on failure — many clients treat 401 as "network error"
         if (username !== "ibrahimnet" || password !== "ibrahim@360") {
-            return res.status(401).json({
+            return res.status(200).json({
                 success: false,
                 message: "Incorrect username or password"
             });
         }
 
         const now = new Date();
-        const time = now.toISOString()
-            .replace("T", " ")
-            .substring(0, 19);
+        const time = now.toISOString().replace("T", " ").substring(0, 19);
 
         return res.status(200).json({
             success: true,
@@ -102,40 +110,24 @@ export default function handler(req, res) {
     }
 
     // ---- EXISTING CODE BELOW ----
-
     let action = "";
-
     try {
-        if (req.body && req.body.action) {
-            action = req.body.action;
-        }
+        if (req.body && req.body.action) action = req.body.action;
     } catch(e) {}
 
     if (action === "get_patch_algorithms" || req.url.includes("algorithms")) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            algorithms: []
-        });
+        return res.status(200).json({ status: "SUCCESS", algorithms: [] });
     }
-
     if (action === "get_secure_logic" || req.url.includes("secure")) {
-        return res.status(200).json({
-            status: "SUCCESS",
-            data: "License valid"
-        });
+        return res.status(200).json({ status: "SUCCESS", data: "License valid" });
     }
-
     if (req.url.includes("check_update")) {
         return res.status(200).send("0.7.93");
     }
 
-    // OLD FALLBACK
     return res.status(200).send("SUCCESS|732|2028-06-08");
 }
 
-// ============================================
-// HELPER FUNCTION
-// ============================================
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0;
