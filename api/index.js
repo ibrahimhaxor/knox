@@ -1,10 +1,13 @@
-export default function handler(req, res) {
+export default async function handler(req, res) {
 
     const path = req.url.split("?")[0];
 
+    // Safely parse body ONCE for all routes
+    const body = await getBody(req);
+
     console.log("METHOD:", req.method);
     console.log("PATH:", path);
-    console.log("BODY:", req.body);
+    console.log("BODY:", body);
 
     // GET /360/version
     if (path === "/360/version" && req.method === "GET") {
@@ -18,14 +21,12 @@ export default function handler(req, res) {
     // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
     // ============================================
     if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-        
-        // Get operation from request body
-        const operation = req.body?.operation || 'spd';
-        const request_id = req.body?.request_id || generateUUID();
-        const cost = req.body?.cost || 2;
+
+        const operation = body?.operation || 'spd';
+        const request_id = body?.request_id || generateUUID();
+        const cost = body?.cost || 2;
         const now = new Date();
 
-        // Base response
         const response = {
             success: true,
             message: "OK",
@@ -47,25 +48,21 @@ export default function handler(req, res) {
             login_time: now.toISOString().replace("T", " ").substring(0, 19)
         };
 
-        // ============================================
-        // OPERATION ROUTING: SPD, MTK, META
-        // ============================================
         if (operation === "spd") {
             response.message = "SPD operation successful";
             response.operation = "spd";
-            
+
         } else if (operation === "mtk") {
             response.message = "MTK operation successful";
             response.operation = "mtk";
-            
+
         } else if (operation === "meta_fix_blackscreen") {
             response.message = "Meta fix blackscreen operation successful";
             response.operation = "meta_fix_blackscreen";
             response.meta_status = "fixed";
             response.blackscreen_fix = "applied";
-            
+
         } else {
-            // Default fallback for any other operation
             response.message = "Operation successful";
             response.operation = operation;
         }
@@ -73,17 +70,20 @@ export default function handler(req, res) {
         return res.status(200).json(response);
     }
 
-    // POST /360/login12
+    // ============================================
+    // POST /360/login12  — with username validation
+    // ============================================
     if (path === "/360/login12" && req.method === "POST") {
 
-        // ============================================
-        // USERNAME VALIDATION
-        // ============================================
-        const username = req.body?.username || "";
-        if (username !== "ibrahimnet@360") {
+        const username = String(body?.username || "").trim();
+
+        console.log("login12 username received:", JSON.stringify(username));
+
+        if (username.toLowerCase() !== "ibrahimnet@360") {
             return res.status(400).json({
                 success: false,
-                message: "Invalid username"
+                message: "Invalid username",
+                received_username: username
             });
         }
 
@@ -106,15 +106,15 @@ export default function handler(req, res) {
         });
     }
 
-    // ---- YOUR EXISTING CODE BELOW ----
+    // ---- EXISTING FALLBACK LOGIC ----
 
     let action = "";
 
     try {
-        if (req.body && req.body.action) {
-            action = req.body.action;
+        if (body && body.action) {
+            action = body.action;
         }
-    } catch(e) {}
+    } catch (e) {}
 
     if (action === "get_patch_algorithms" || req.url.includes("algorithms")) {
         return res.status(200).json({
@@ -139,7 +139,63 @@ export default function handler(req, res) {
 }
 
 // ============================================
-// HELPER FUNCTION
+// HELPER: safely parse body from any content type
+// ============================================
+async function getBody(req) {
+    const ct = (req.headers && req.headers["content-type"]) || "";
+
+    // Already parsed as object by the platform
+    if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+        return req.body;
+    }
+
+    // Buffer (some platforms give a Buffer)
+    if (Buffer.isBuffer(req.body)) {
+        const str = req.body.toString("utf8");
+        return parseString(str, ct);
+    }
+
+    // String body
+    if (typeof req.body === "string") {
+        return parseString(req.body, ct);
+    }
+
+    // Raw stream (nothing parsed yet)
+    return await new Promise((resolve) => {
+        let data = "";
+        req.on("data", (chunk) => (data += chunk));
+        req.on("end", () => resolve(parseString(data, ct)));
+        req.on("error", () => resolve({}));
+    });
+}
+
+function parseString(str, contentType) {
+    if (!str) return {};
+
+    // form-urlencoded
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+        try {
+            return Object.fromEntries(new URLSearchParams(str));
+        } catch (e) {
+            return {};
+        }
+    }
+
+    // JSON (default attempt)
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        // last-ditch: try urlencoded anyway
+        try {
+            return Object.fromEntries(new URLSearchParams(str));
+        } catch (e2) {
+            return {};
+        }
+    }
+}
+
+// ============================================
+// HELPER: UUID
 // ============================================
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
