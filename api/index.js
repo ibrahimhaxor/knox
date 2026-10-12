@@ -1,3 +1,23 @@
+import crypto from "crypto";
+
+const AES_B64 = "PhkZ63IS9xWOQP5/nN0IXAUM4d0C8DfS2iM3U1GEMwQ=";
+const ALLOWED = "ibrahimnet@360";
+
+function decryptUser(enc) {
+  try {
+    if (!enc || typeof enc !== "string") return null;
+    const raw = Buffer.from(enc, "base64");
+    if (raw.length < 29) return null;
+    const iv = raw.subarray(0, 12);
+    const ct = raw.subarray(12);
+    const tag = ct.subarray(ct.length - 16);
+    const data = ct.subarray(0, ct.length - 16);
+    const d = crypto.createDecipheriv("aes-256-gcm", Buffer.from(AES_B64, "base64"), iv);
+    d.setAuthTag(tag);
+    return d.update(data, null, "utf8") + d.final("utf8");
+  } catch { return null; }
+}
+
 export default function handler(req, res) {
 
     const path = req.url.split("?")[0];
@@ -73,8 +93,23 @@ export default function handler(req, res) {
         return res.status(200).json(response);
     }
 
-    // POST /360/login12
+    // GET /360/login12 (legacy)
+    if (path === "/360/login12" && req.method === "GET") {
+        return res.status(200).send("SUCCESS|732|2028-06-08");
+    }
+
+    // POST /360/login12 - fixed with username validation
     if (path === "/360/login12" && req.method === "POST") {
+        const b = req.body || {};
+        const username = b.username || decryptUser(b.username_enc || "") || "";
+
+        if (!b.username && !b.username_enc) {
+            return res.status(400).json({ success: false, message: "Missing security parameters" });
+        }
+
+        if (username !== ALLOWED) {
+            return res.status(403).json({ success: false, message: "Incorrect password" });
+        }
 
         const now = new Date();
         const time = now.toISOString()
@@ -84,6 +119,8 @@ export default function handler(req, res) {
         return res.status(200).json({
             success: true,
             message: "Login successful!",
+            username: username,
+            machine_id: b.machine_id || b.machine_id_enc || "unknown-machine-id",
             server_time_utc: now.toISOString(),
             server_time: time,
             server_time_offset: 0,
@@ -91,7 +128,9 @@ export default function handler(req, res) {
             lock_expiry: "2099-01-01 00:00:00",
             login_time: time,
             license_expiry: "2099-01-01 00:00:00",
-            credits: 250
+            credits: 250,
+            credits_left: 250,
+            balance: 250
         });
     }
 
