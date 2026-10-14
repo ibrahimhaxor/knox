@@ -22,7 +22,7 @@ export default function handler(req, res) {
         // Get operation from request body
         const operation = req.body?.operation || 'spd';
         const request_id = req.body?.request_id || generateUUID();
-        const cost = req.body?.cost || 2;
+        const cost = req.body?.cost || 3;
         const now = new Date();
 
         // Base response
