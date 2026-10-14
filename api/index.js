@@ -18,7 +18,7 @@ export default function handler(req, res) {
     const COSTS = {
         spd_unlock_bl: 3,
         transsion_unlock_bl: 3,
-        mtk: 2,
+        mtk: 3,
         spd: 1,
         mtk_permanent: 5,
         zte_unlock_bl: 5,
