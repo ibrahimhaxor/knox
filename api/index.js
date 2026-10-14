@@ -1,5 +1,4 @@
 export default function handler(req, res) {
-
     const path = req.url.split("?")[0];
 
     console.log("METHOD:", req.method);
@@ -14,81 +13,70 @@ export default function handler(req, res) {
         });
     }
 
- // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
-// ============================================
-const COSTS = {
-  spd_unlock_bl: 1,          // SpdTab UNLOCK-BL / Transsion Security plugin
-  transsion_unlock_bl: 3,    // Transsion UNLOCK BL
-  mtk: 2,                    // MTK Patch / BYPASS BLACK-CRN
-  spd: 2,                    // SPD Patch / SPD PERM/TEMP PATCH
-  mtk_permanent: 5,          // PERM BLACK-CRN
-  zte_unlock_bl: 5,          // Direct BL Unlock
-};
+    // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
+    // ============================================
+    const COSTS = {
+        spd_unlock_bl: 1,
+        transsion_unlock_bl: 3,
+        mtk: 2,
+        spd: 2,
+        mtk_permanent: 5,
+        zte_unlock_bl: 5,
+    };
 
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
-
-function deepFind(obj, keys) {
-  if (!obj || typeof obj !== 'object') return undefined;
-  for (const k of keys) {
-    if (obj[k] !== undefined) return obj[k];
-  }
-  for (const v of Object.values(obj)) {
-    if (v && typeof v === 'object') {
-      const r = deepFind(v, keys);
-      if (r !== undefined) return r;
+    function deepFind(obj, keys) {
+        if (!obj || typeof obj !== 'object') return undefined;
+        for (const k of keys) {
+            if (obj[k] !== undefined) return obj[k];
+        }
+        for (const v of Object.values(obj)) {
+            if (v && typeof v === 'object') {
+                const r = deepFind(v, keys);
+                if (r !== undefined) return r;
+            }
+        }
+        return undefined;
     }
-  }
-  return undefined;
-}
 
-if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-  // Support GET query + POST plain JSON + encrypted wrapper {payload,signature,data}
-  const query = req.query || {};
-  const body = req.body || {};
+    if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
+        const query = req.query || {};
+        const body = req.body || {};
 
-  const operation = deepFind(body, ['operation'])
-    || query.operation
-    || 'spd';
+        const operation = deepFind(body, ['operation'])
+            || query.operation
+            || 'spd';
 
-  const request_id = deepFind(body, ['request_id', 'requestId', 'requestid'])
-    || query.request_id
-    || query.requestId
-    || generateUUID();
+        const request_id = deepFind(body, ['request_id', 'requestId', 'requestid'])
+            || query.request_id
+            || query.requestId
+            || generateUUID();
 
-  // Never trust client cost — server decides, else cost-mismatch stop
-  const cost = COSTS[operation] ?? 2;
+        const cost = COSTS[operation] ?? 2;
 
-  const now = new Date();
-  const server_time = now.toISOString().replace("T", " ").substring(0, 19);
+        const now = new Date();
+        const server_time = now.toISOString().replace("T", " ").substring(0, 19);
 
-  const response = {
-    success: true,
-    message: "OK",
-    operation: operation,          // must echo exact slug
-    request_id: request_id,        // must echo exact id
-    cost: cost,
-    credits_used: cost,            // float(cost) == expected_cost
-    credits_left: 248,
-    balance: 248,
-    confirmed_balance: 248,
-    new_balance: 248,
-    credits: 248,
-    license_expiry: "2099-01-01 00:00:00",
-    lock_expiry: "2099-01-01 00:00:00",
-    server_time_utc: now.toISOString(),
-    server_time: server_time,
-    auth_check_interval: 3600,
-    server_time_offset: 0,
-    login_time: server_time
-  };
-
-  return res.status(200).json(response);
-}
+        // Build response object FIRST
+        const response = {
+            success: true,
+            message: "OK",
+            operation: operation,
+            request_id: request_id,
+            cost: cost,
+            credits_used: cost,
+            credits_left: 248,
+            balance: 248,
+            confirmed_balance: 248,
+            new_balance: 248,
+            credits: 248,
+            license_expiry: "2099-01-01 00:00:00",
+            lock_expiry: "2099-01-01 00:00:00",
+            server_time_utc: now.toISOString(),
+            server_time: server_time,
+            auth_check_interval: 3600,
+            server_time_offset: 0,
+            login_time: server_time
+        };
 
         // ============================================
         // OPERATION ROUTING: SPD, MTK, META
@@ -96,19 +84,15 @@ if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "PO
         if (operation === "spd") {
             response.message = "SPD operation successful";
             response.operation = "spd";
-            
         } else if (operation === "mtk") {
             response.message = "MTK operation successful";
             response.operation = "mtk";
-            
         } else if (operation === "meta_fix_blackscreen") {
             response.message = "Meta fix blackscreen operation successful";
             response.operation = "meta_fix_blackscreen";
             response.meta_status = "fixed";
             response.blackscreen_fix = "applied";
-            
         } else {
-            // Default fallback for any other operation
             response.message = "Operation successful";
             response.operation = operation;
         }
@@ -118,7 +102,6 @@ if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "PO
 
     // POST /360/login12
     if (path === "/360/login12" && req.method === "POST") {
-
         const now = new Date();
         const time = now.toISOString()
             .replace("T", " ")
@@ -146,7 +129,7 @@ if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "PO
         if (req.body && req.body.action) {
             action = req.body.action;
         }
-    } catch(e) {}
+    } catch (e) {}
 
     if (action === "get_patch_algorithms" || req.url.includes("algorithms")) {
         return res.status(200).json({
@@ -174,7 +157,7 @@ if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "PO
 // HELPER FUNCTION
 // ============================================
 function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
