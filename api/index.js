@@ -14,38 +14,81 @@ export default function handler(req, res) {
         });
     }
 
-    // ============================================
-    // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
-    // ============================================
-    if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
-        
-        // Get operation from request body
-        const operation = req.body?.operation || 'spd';
-        const request_id = req.body?.request_id || generateUUID();
-        const cost = req.body?.cost || 3;
-        const now = new Date();
+ // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
+// ============================================
+const COSTS = {
+  spd_unlock_bl: 1,          // SpdTab UNLOCK-BL / Transsion Security plugin
+  transsion_unlock_bl: 3,    // Transsion UNLOCK BL
+  mtk: 2,                    // MTK Patch / BYPASS BLACK-CRN
+  spd: 2,                    // SPD Patch / SPD PERM/TEMP PATCH
+  mtk_permanent: 5,          // PERM BLACK-CRN
+  zte_unlock_bl: 5,          // Direct BL Unlock
+};
 
-        // Base response
-        const response = {
-            success: true,
-            message: "OK",
-            operation: operation,
-            request_id: request_id,
-            cost: cost,
-            credits_used: cost,
-            credits_left: 248,
-            balance: 248,
-            confirmed_balance: 248,
-            new_balance: 248,
-            credits: 248,
-            license_expiry: "2099-01-01 00:00:00",
-            lock_expiry: "2099-01-01 00:00:00",
-            server_time_utc: now.toISOString(),
-            server_time: now.toISOString().replace("T", " ").substring(0, 19),
-            auth_check_interval: 3600,
-            server_time_offset: 0,
-            login_time: now.toISOString().replace("T", " ").substring(0, 19)
-        };
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function deepFind(obj, keys) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  for (const k of keys) {
+    if (obj[k] !== undefined) return obj[k];
+  }
+  for (const v of Object.values(obj)) {
+    if (v && typeof v === 'object') {
+      const r = deepFind(v, keys);
+      if (r !== undefined) return r;
+    }
+  }
+  return undefined;
+}
+
+if (path === "/360/credit1234567" && (req.method === "GET" || req.method === "POST")) {
+  // Support GET query + POST plain JSON + encrypted wrapper {payload,signature,data}
+  const query = req.query || {};
+  const body = req.body || {};
+
+  const operation = deepFind(body, ['operation'])
+    || query.operation
+    || 'spd';
+
+  const request_id = deepFind(body, ['request_id', 'requestId', 'requestid'])
+    || query.request_id
+    || query.requestId
+    || generateUUID();
+
+  // Never trust client cost — server decides, else cost-mismatch stop
+  const cost = COSTS[operation] ?? 2;
+
+  const now = new Date();
+  const server_time = now.toISOString().replace("T", " ").substring(0, 19);
+
+  const response = {
+    success: true,
+    message: "OK",
+    operation: operation,          // must echo exact slug
+    request_id: request_id,        // must echo exact id
+    cost: cost,
+    credits_used: cost,            // float(cost) == expected_cost
+    credits_left: 248,
+    balance: 248,
+    confirmed_balance: 248,
+    new_balance: 248,
+    credits: 248,
+    license_expiry: "2099-01-01 00:00:00",
+    lock_expiry: "2099-01-01 00:00:00",
+    server_time_utc: now.toISOString(),
+    server_time: server_time,
+    auth_check_interval: 3600,
+    server_time_offset: 0,
+    login_time: server_time
+  };
+
+  return res.status(200).json(response);
+}
 
         // ============================================
         // OPERATION ROUTING: SPD, MTK, META
