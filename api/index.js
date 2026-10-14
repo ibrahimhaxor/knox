@@ -51,7 +51,7 @@ export default function handler(req, res) {
             || query.requestId
             || generateUUID();
 
-        const cost = COSTS[operation] ?? 2;
+        const cost = COSTS[operation] ?? 3;
 
         const now = new Date();
         const server_time = now.toISOString().replace("T", " ").substring(0, 19);
