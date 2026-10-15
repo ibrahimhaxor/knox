@@ -16,7 +16,7 @@ export default function handler(req, res) {
     // /360/credit1234567 - SPD, MTK, META_FIX_BLACKSCREEN
     // ============================================
     const COSTS = {
-        spd_unlock_bl: 3,
+        spd_unlock_bl: 1,
         transsion_unlock_bl: 3,
         mtk: 3,
         spd: 1,
